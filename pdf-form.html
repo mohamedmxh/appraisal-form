@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Performance Evaluation (PDF) — Zanzibar Beach Village Ltd.</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <style>
+    /* ── Design tokens ──────────────────────────────────────── */
+    :root {
+      --navy:      #1e3a5f;
+      --tan:       #c8a055;
+      --tan-bg:    #f0e6cc;
+      --tan-head:  #e8d5a4;
+      --tan-pale:  #faf3e4;
+      --white:     #ffffff;
+      --text:      #1a1a1a;
+      --muted:     #5a5548;
+      --border:    #c8b888;
+      --border-lt: #ddd0b0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: #ede8de;
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Toolbar (screen only) ──────────────────────────────── */
+    .toolbar {
+      background: var(--navy);
+      padding: 11px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 300;
+      box-shadow: 0 2px 10px rgba(0,0,0,.3);
+    }
+    .toolbar-brand { color: #e8d5a4; font-size: 12px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; }
+    .toolbar-actions { display: flex; gap: 8px; align-items: center; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 15px;
+      border-radius: 6px;
+      font-size: 13px; font-weight: 600;
+      cursor: pointer; border: none;
+      text-decoration: none; font-family: inherit;
+      transition: background .15s, opacity .15s;
+    }
+    .btn:disabled { opacity: .6; cursor: not-allowed; }
+    .btn-tan    { background: var(--tan); color: var(--navy); }
+    .btn-tan:hover:not(:disabled) { background: #b08040; }
+    .btn-ghost  { background: transparent; color: #e8d5a4; border: 1px solid rgba(232,213,164,.4); }
+    .btn-ghost:hover { background: rgba(200,160,85,.1); }
+    .btn-green  { background: #1e7e44; color: white; }
+    .btn-green:hover:not(:disabled) { background: #176237; }
+    .btn-lg { padding: 10px 20px; font-size: 14px; }
+
+    /* ── Page container ─────────────────────────────────────── */
+    .page-wrap { padding: 24px 16px 72px; }
+
+    /* ── A4 Form sheet ──────────────────────────────────────── */
+    #form-sheet {
+      background: white;
+      width: 210mm;
+      margin: 0 auto;
+      box-shadow: 0 4px 28px rgba(0,0,0,.15);
+      font-size: 11pt;
+      line-height: 1.4;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    .hdr {
+      text-align: center;
+      padding: 18px 24px 14px;
+      border-bottom: 2px solid var(--navy);
+    }
+    .hdr-icon { font-size: 36px; line-height: 1; }
+    .hdr-company { font-size: 16pt; font-weight: 700; margin-top: 6px; color: var(--navy); }
+    .hdr-address { font-size: 9.5pt; color: var(--muted); margin-top: 2px; }
+    .hdr-title   { font-size: 12pt; font-weight: 700; text-transform: uppercase; letter-spacing: 2.5px; color: var(--tan); margin-top: 8px; }
+
+    /* score box */
+    .hdr-score {
+      position: absolute;
+      top: 14px; right: 16px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      text-align: center;
+      min-width: 64px;
+      background: white;
+    }
+    .score-lbl { font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
+    .score-val { font-size: 18pt; font-weight: 800; color: var(--navy); line-height: 1.1; }
+
+    /* ── Table helpers ──────────────────────────────────────── */
+    .tbl {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid var(--border);
+    }
+    .tbl th, .tbl td { border: 1px solid var(--border); padding: 0; vertical-align: top; }
+
+    .th-tan {
+      background: var(--tan-head);
+      font-size: 9pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: #5c3d10;
+      padding: 7px 10px;
+      text-align: center;
+    }
+    .th-tan.left { text-align: left; }
+
+    .cell { padding: 6px 10px; }
+    .label-cell { font-weight: 600; font-size: 9.5pt; white-space: nowrap; }
+    .value-cell { font-size: 10pt; }
+    .underline {
+      border-bottom: 1px solid #aaa;
+      min-height: 20px;
+      display: block;
+      width: 100%;
+    }
+
+    /* ── Section header bar ─────────────────────────────────── */
+    .sec-bar {
+      background: var(--tan-head);
+      border: 1px solid var(--border);
+      padding: 7px 14px;
+      font-size: 9.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #5c3d10;
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    /* ── Checkboxes (purpose) ───────────────────────────────── */
+    .cb-table { width: 100%; border-collapse: collapse; }
+    .cb-table td { padding: 5px 10px; vertical-align: top; width: 50%; }
+    .cb-label {
+      display: flex; align-items: flex-start; gap: 7px;
+      font-size: 9.5pt; cursor: pointer;
+    }
+    .cb-label input { width: 13px; height: 13px; margin-top: 2px; flex-shrink: 0; accent-color: var(--navy); cursor: pointer; }
+
+    /* ── Rating scale chips ─────────────────────────────────── */
+    .scale-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px; }
+    .scale-chip {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 9.5pt;
+    }
+    .scale-chip input { width: 12px; height: 12px; accent-color: var(--navy); }
+
+    /* ── Performance factor rows ─────────────────────────────── */
+    .factor-desc-cell { padding: 8px 10px; }
+    .factor-num-badge {
+      display: inline-block;
+      width: 18px; height: 18px;
+      background: var(--navy); color: white;
+      font-size: 8.5pt; font-weight: 700;
+      border-radius: 50%;
+      text-align: center; line-height: 18px;
+      margin-right: 5px;
+      vertical-align: middle;
+    }
+    .factor-title { font-size: 9.5pt; font-weight: 700; color: var(--navy); }
+    .factor-body  { font-size: 8.5pt; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+    .factor-comment { font-size: 8pt; color: var(--muted); margin-top: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+    .factor-comment-line { border-bottom: 1px solid #bbb; height: 16px; margin-top: 2px; }
+
+    .rating-col-cell { padding: 8px 6px; }
+    .rating-options { list-style: none; display: flex; flex-direction: column; gap: 3px; }
+    .rating-options li label {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 8.5pt; cursor: pointer;
+      padding: 2px 4px; border-radius: 3px;
+      transition: background .1s;
+    }
+    .rating-options li label:hover { background: var(--tan-pale); }
+    .rating-options li label input { width: 11px; height: 11px; accent-color: var(--navy); flex-shrink: 0; cursor: pointer; }
+
+    /* ── Total row ───────────────────────────────────────────── */
+    .total-row td { background: var(--navy); color: white; font-weight: 700; font-size: 9.5pt; text-align: center; padding: 8px 10px; text-transform: uppercase; letter-spacing: .8px; }
+    .total-row td:first-child { text-align: right; }
+
+    /* ── Evaluation section ──────────────────────────────────── */
+    .eval-textarea {
+      width: 100%;
+      border: none;
+      resize: none;
+      font-family: inherit;
+      font-size: 9.5pt;
+      color: var(--text);
+      background: transparent;
+      outline: none;
+      min-height: 48px;
+      padding: 4px 0;
+    }
+    .eval-grid { display: grid; grid-template-columns: 1fr 1fr; }
+    .eval-grid > div { padding: 8px 10px; border-right: 1px solid var(--border); }
+    .eval-grid > div:last-child { border-right: none; }
+    .eval-label { font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 4px; }
+
+    /* ── Recommendation ──────────────────────────────────────── */
+    .rec-label {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--border-lt);
+      font-size: 9.5pt; cursor: pointer;
+    }
+    .rec-label:last-child { border-bottom: none; }
+    .rec-label input { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; accent-color: var(--navy); cursor: pointer; }
+    .rec-label .rec-title { font-weight: 600; }
+    .rec-label .rec-sub   { font-size: 8.5pt; color: var(--muted); margin-top: 2px; }
+    #rec-date-inline { display: none; margin-top: 4px; font-size: 8.5pt; color: var(--muted); align-items: center; gap: 6px; }
+
+    /* ── Signature rows ──────────────────────────────────────── */
+    .sig-table { width: 100%; border-collapse: collapse; }
+    .sig-table td { padding: 10px 14px; border-bottom: 1px solid var(--border-lt); }
+    .sig-table tr:last-child td { border-bottom: none; }
+    .sig-lbl  { font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 4px; }
+    .sig-line { border-bottom: 1px solid #aaa; height: 26px; }
+
+    /* ── Notice box ──────────────────────────────────────────── */
+    .notice {
+      font-size: 8.5pt; font-style: italic; color: var(--muted);
+      padding: 8px 12px;
+      background: var(--tan-pale);
+      border-left: 3px solid var(--tan);
+      margin: 10px 14px;
+      border-radius: 0 4px 4px 0;
+    }
+
+    /* ── Footer ──────────────────────────────────────────────── */
+    .form-footer {
+      text-align: center;
+      font-size: 7.5pt;
+      color: var(--muted);
+      padding: 8px 14px;
+      border-top: 1px solid var(--border-lt);
+      background: var(--tan-pale);
+    }
+
+    /* ── Print / PDF ─────────────────────────────────────────── */
+    @media print {
+      body { background: white; }
+      .toolbar { display: none !important; }
+      .page-wrap { padding: 0; }
+      #form-sheet { width: 100%; box-shadow: none; }
+    }
+
+    @media (max-width: 820px) {
+      #form-sheet { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ Toolbar ═══════════════════════════════════════════════ -->
+<nav class="toolbar">
+  <span class="toolbar-brand">&#128196; PDF Form — Zanzibar Beach Village</span>
+  <div class="toolbar-actions">
+    <a href="index.html" class="btn btn-ghost">&#8592; Web Form</a>
+    <button type="button" class="btn btn-green btn-lg" id="download-btn" onclick="downloadPDF()">
+      &#11015; Download PDF
+    </button>
+    <button type="button" class="btn btn-tan" id="email-btn" onclick="emailHR()">
+      &#9993; Email to HR
+    </button>
+  </div>
+</nav>
+
+<!-- ═══ Page ══════════════════════════════════════════════════ -->
+<div class="page-wrap">
+<div id="form-sheet">
+
+  <!-- ── Header ───────────────────────────────────────────── -->
+  <div class="hdr" style="position:relative">
+    <div class="hdr-icon">&#127796;</div>
+    <div class="hdr-company">Zanzibar Beach Village Ltd.</div>
+    <div class="hdr-address">P.O. BOX 3498, Zanzibar</div>
+    <div class="hdr-title">Performance Evaluation</div>
+    <div class="hdr-score">
+      <div class="score-lbl">% Score</div>
+      <div class="score-val" id="pdf-score">&mdash;</div>
+    </div>
+  </div>
+
+  <!-- ── Employee Info ─────────────────────────────────────── -->
+  <div class="sec-bar">Employee Information</div>
+  <table class="tbl">
+    <tr>
+      <td class="cell label-cell" style="width:14%">Name:</td>
+      <td class="cell value-cell" style="width:36%"><input type="text" id="p-name" placeholder="Full name" style="border:none;width:100%;font-size:10pt;outline:none;font-family:inherit"></td>
+      <td class="cell label-cell" style="width:14%">Payroll No:</td>
+      <td class="cell value-cell"><input type="text" id="p-payroll" placeholder="e.g. ZBV-0001" style="border:none;width:100%;font-size:10pt;outline:none;font-family:inherit"></td>
+    </tr>
+    <tr>
+      <td class="cell label-cell">Job Title:</td>
+      <td class="cell value-cell"><input type="text" id="p-title" placeholder="Position / role" style="border:none;width:100%;font-size:10pt;outline:none;font-family:inherit"></td>
+      <td class="cell label-cell">Date:</td>
+      <td class="cell value-cell"><input type="date" id="p-date" style="border:none;width:100%;font-size:10pt;outline:none;font-family:inherit"></td>
+    </tr>
+    <tr>
+      <td class="cell label-cell">Department:</td>
+      <td class="cell value-cell"><input type="text" id="p-dept" placeholder="Department" style="border:none;width:100%;font-size:10pt;outline:none;font-family:inherit"></td>
+      <td class="cell label-cell">Manager/Appraiser:</td>
+      <td class="cell value-cell"><input type="text" id="p-mgr" placeholder="Manager's name" style="border:none;width:100%;font-size:10pt;outline:none;font-family:inherit"></td>
+    </tr>
+    <tr>
+      <td class="cell label-cell" colspan="2" style="vertical-align:middle">
+        Review Period:
+        <select id="p-period" style="margin-left:6px;border:1px solid #ccc;border-radius:4px;font-size:9.5pt;padding:2px 6px;font-family:inherit;background:#fdfcfa">
+          <option value="">03 probation / 06 Months or 1 year Contract</option>
+          <option value="03-probation">03 Months — Probation</option>
+          <option value="06-months">06 Months Contract</option>
+          <option value="1-year">1 Year Contract</option>
+        </select>
+      </td>
+      <td class="cell" style="font-size:9.5pt">
+        <span style="font-weight:600">From:</span>
+        <input type="date" id="p-from" style="border:none;font-size:9.5pt;outline:none;margin-left:4px;font-family:inherit">
+      </td>
+      <td class="cell" style="font-size:9.5pt">
+        <span style="font-weight:600">To:</span>
+        <input type="date" id="p-to" style="border:none;font-size:9.5pt;outline:none;margin-left:4px;font-family:inherit">
+      </td>
+    </tr>
+  </table>
+
+  <!-- ── Purpose of Appraisal ──────────────────────────────── -->
+  <div class="sec-bar">Purpose of Appraisal &nbsp;(Tick &#10003; where appropriate)</div>
+  <table class="cb-table" style="border:1px solid var(--border);border-top:none">
+    <tr>
+      <td>
+        <label class="cb-label">
+          <input type="checkbox" name="purpose"> Review Job Performance during their first 3 months (probation)
+        </label>
+      </td>
+      <td>
+        <label class="cb-label">
+          <input type="checkbox" name="purpose"> Agree on Job Objectives for Coming Periods
+        </label>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <label class="cb-label">
+          <input type="checkbox" name="purpose"> Discuss Career Aspirations of the employee
+        </label>
+      </td>
+      <td>
+        <label class="cb-label">
+          <input type="checkbox" name="purpose"> Identify Staff's Training &amp; Development Needs
+        </label>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <label class="cb-label">
+          <input type="checkbox" name="purpose"> Set Performance Standard Before Next Review
+        </label>
+      </td>
+      <td>
+        <label class="cb-label">
+          <input type="checkbox" name="purpose"> Possibility of Renewal of Contract
+        </label>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <label class="cb-label">
+          <input type="checkbox" name="purpose"> New Staff
+        </label>
+      </td>
+      <td></td>
+    </tr>
+  </table>
+
+  <!-- ── Rating Scale ──────────────────────────────────────── -->
+  <div class="sec-bar">Rating Scale</div>
+  <div style="border:1px solid var(--border);border-top:none">
+    <div class="scale-row">
+      <span class="scale-chip"><input type="checkbox" disabled> <strong>91–100</strong> = Achieved Excellence</span>
+      <span class="scale-chip"><input type="checkbox" disabled> <strong>81–90</strong> = Exceeded Expectations</span>
+      <span class="scale-chip"><input type="checkbox" disabled> <strong>71–80</strong> = Achieved Expectations</span>
+      <span class="scale-chip"><input type="checkbox" disabled> <strong>61–70</strong> = Minimally Satisfactory</span>
+      <span class="scale-chip"><input type="checkbox" disabled> <strong>Less than 60</strong> = Unacceptable</span>
+    </div>
+  </div>
+
+  <!-- ── Performance Factors ───────────────────────────────── -->
+  <div class="sec-bar">Performance Factors</div>
+  <table class="tbl" id="pdf-factors-table">
+    <thead>
+      <tr>
+        <th class="th-tan left" style="width:52%">Performance Factor</th>
+        <th class="th-tan" style="width:24%">Staff Ratings</th>
+        <th class="th-tan" style="width:24%">Manager's Ratings</th>
+      </tr>
+    </thead>
+    <tbody id="pdf-factors-body"></tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td style="text-align:right;padding-right:14px">Total</td>
+        <td id="pdf-staff-avg">&mdash;</td>
+        <td id="pdf-mgr-avg">&mdash;</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- ── Evaluation ────────────────────────────────────────── -->
+  <div class="sec-bar">Evaluation</div>
+  <div style="border:1px solid var(--border);border-top:none">
+    <div style="padding:8px 12px;border-bottom:1px solid var(--border-lt)">
+      <div class="eval-label">General Comments</div>
+      <textarea id="p-general" class="eval-textarea" rows="2"
+        placeholder="Overall observations, highlights, and areas of concern…"></textarea>
+    </div>
+    <div class="eval-grid">
+      <div>
+        <div class="eval-label">Goals <span style="font-weight:400;text-transform:none">(as agreed by Employee &amp; Manager)</span></div>
+        <textarea id="p-goals" class="eval-textarea" rows="3"
+          placeholder="List agreed performance goals for the next review period…"></textarea>
+      </div>
+      <div>
+        <div class="eval-label">Training &amp; Development Plan</div>
+        <textarea id="p-devplan" class="eval-textarea" rows="3"
+          placeholder="Training and development activities identified…"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Recommendation ────────────────────────────────────── -->
+  <div class="sec-bar" style="text-align:left;padding-left:14px">Recommendation &nbsp;<span style="font-weight:400;text-transform:none;font-size:9pt">(Select one option)</span></div>
+  <div style="border:1px solid var(--border);border-top:none">
+    <label class="rec-label">
+      <input type="radio" name="pdf-rec" value="extend">
+      <div>
+        <div class="rec-title">Extend the Contract (Orientation) Period for further assessment</div>
+        <div class="rec-sub">Please indicate next review date</div>
+        <div class="rec-date" id="rec-date-inline" style="display:none;margin-top:4px;font-size:8.5pt;color:#5a5548;align-items:center;gap:6px">
+          Upcoming review to be held on:
+          <input type="date" style="border:none;border-bottom:1px solid #aaa;font-size:8.5pt;outline:none;margin-left:4px;font-family:inherit">
+        </div>
+      </div>
+    </label>
+    <label class="rec-label">
+      <input type="radio" name="pdf-rec" value="confirm">
+      <div>
+        <div class="rec-title">Confirm / Renew Employment</div>
+        <div class="rec-sub">Performance meets the required standard for confirmation or contract renewal.</div>
+      </div>
+    </label>
+    <label class="rec-label">
+      <input type="radio" name="pdf-rec" value="non-renewal">
+      <div>
+        <div class="rec-title">Non-Renewal</div>
+        <div class="rec-sub">Contract will not be renewed at end of current period.</div>
+      </div>
+    </label>
+  </div>
+
+  <!-- ── Verification ──────────────────────────────────────── -->
+  <div class="sec-bar">Verification of Review</div>
+  <div style="border:1px solid var(--border);border-top:none">
+    <div class="notice">
+      By signing this form, you confirm that you have discussed this review in detail with your manager.
+      However, it does not necessarily indicate that you agree with this evaluation.
+    </div>
+    <table class="sig-table">
+      <tr>
+        <td style="width:65%">
+          <div class="sig-lbl">Employee Signature</div>
+          <div class="sig-line"></div>
+        </td>
+        <td>
+          <div class="sig-lbl">Date</div>
+          <input type="date" style="border:none;border-bottom:1px solid #aaa;width:100%;font-size:9.5pt;outline:none;font-family:inherit;margin-top:4px">
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <div class="sig-lbl">HOD's Signature</div>
+          <div class="sig-line"></div>
+        </td>
+        <td>
+          <div class="sig-lbl">Date</div>
+          <input type="date" style="border:none;border-bottom:1px solid #aaa;width:100%;font-size:9.5pt;outline:none;font-family:inherit;margin-top:4px">
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <div class="sig-lbl">HR Manager's Signature</div>
+          <div class="sig-line"></div>
+        </td>
+        <td>
+          <div class="sig-lbl">Date</div>
+          <input type="date" style="border:none;border-bottom:1px solid #aaa;width:100%;font-size:9.5pt;outline:none;font-family:inherit;margin-top:4px">
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ── Footer ────────────────────────────────────────────── -->
+  <div class="form-footer">
+    Zanzibar Beach Village Ltd. &bull; P.O. BOX 3498, Zanzibar &bull; Confidential — HR Use
+  </div>
+
+</div><!-- #form-sheet -->
+</div><!-- .page-wrap -->
+
+<script>
+/* ── Factor data ─────────────────────────────────────────────── */
+const PDF_FACTORS = [
+  { id:'f1', name:'Job Knowledge', desc:'Has the employee demonstrated the skill & ability to perform the job satisfactorily, shown interest in learning & improving, & become familiar with our rules & policies?' },
+  { id:'f2', name:'Work Quality / Efficiency & Effectiveness', desc:'Accuracy; neatness; meet deadlines; attention to detail; adherence to duties & procedures in Job Description & Work Instruction.' },
+  { id:'f3', name:'Work Quantity', desc:'Does the employee accomplish assigned work in an organized, timely manner, produce necessary results in spite of unforeseen changes, alert team members if deadlines need to be re-negotiated?' },
+  { id:'f4', name:'Work Habits', desc:'Attendance; punctuality; organization. Does the employee stay busy, look for things to do, & follow company policies & work procedures?' },
+  { id:'f5', name:'Adaptability', desc:'Efficiency with which the employee works under stress & responds to change. Receptive to change/new ideas, shows poise and/or courtesy in tough situations?' },
+  { id:'f6', name:'Dependability / Initiative', desc:'Accomplishes assignments with minimal supervision. Independently contributes ideas & projects, follows-through on assignments, demonstrates eagerness & positivism, willingness to assist co-workers.' },
+  { id:'f7', name:'Customer Focus', desc:'Degree to which the employee takes the initiative to meet internal and external customer needs in a timely and courteous manner. Examines customer requests to properly identify & resolve concerns.' },
+  { id:'f8', name:'Health, Safety, Hygiene & Fire Awareness', desc:'Degree to which employee adheres to safety & health regulations. Maintains & observes safety & health standards, notifies others when violating safety & health regulations.' },
+  { id:'f9', name:'Communication', desc:'Seeks to clarify & confirm understanding of unfamiliar terms & instructions, makes oral & written communication clear & easy to understand, takes steps to improve communication precision & efficiency.' },
+  { id:'f10', name:'Behavior / Relations with Others', desc:'Shows respect toward guests/superiors and workmates, cooperates & contributes to team efforts, responds positively to suggestions & instructions or criticism, keeps supervisors informed of important details.' }
+];
+
+const PDF_RATINGS = [
+  { v: 'below60', l: 'Below 60', m: 50 },
+  { v: '60-69',   l: '60–69',   m: 65 },
+  { v: '70-79',   l: '70–79',   m: 75 },
+  { v: '80-89',   l: '80–89',   m: 85 },
+  { v: '90-100',  l: '90–100',  m: 95 }
+];
+
+/* ── Build table body ─────────────────────────────────────────── */
+function ratingList(prefix, fid) {
+  return `<ul class="rating-options">${
+    PDF_RATINGS.map(r => `
+      <li><label>
+        <input type="radio" name="${prefix}_${fid}" value="${r.v}">
+        ${r.l}
+      </label></li>`).join('')
+  }</ul>`;
+}
+
+const pbody = document.getElementById('pdf-factors-body');
+PDF_FACTORS.forEach((f, i) => {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td class="factor-desc-cell">
+      <div>
+        <span class="factor-num-badge">${i+1}</span>
+        <span class="factor-title">${f.name}</span>
+      </div>
+      <div class="factor-body">${f.desc}</div>
+      <div class="factor-comment">Comments:</div>
+      <div class="factor-comment-line"></div>
+    </td>
+    <td class="rating-col-cell">${ratingList('ps', f.id)}</td>
+    <td class="rating-col-cell">${ratingList('pm', f.id)}</td>`;
+  pbody.appendChild(tr);
+});
+
+/* ── Score calculation ─────────────────────────────────────────── */
+document.addEventListener('change', e => {
+  if (e.target.type === 'radio') {
+    if (e.target.name.startsWith('ps_') || e.target.name.startsWith('pm_')) {
+      calcPdfScore();
+    }
+    if (e.target.name === 'pdf-rec') {
+      const row = document.getElementById('rec-date-inline');
+      row.style.display = e.target.value === 'extend' ? 'flex' : 'none';
+    }
+  }
+});
+
+function calcPdfScore() {
+  let sT = 0, sC = 0, mT = 0, mC = 0;
+  PDF_FACTORS.forEach(f => {
+    const sr = document.querySelector(`input[name="ps_${f.id}"]:checked`);
+    const mr = document.querySelector(`input[name="pm_${f.id}"]:checked`);
+    if (sr) { sT += PDF_RATINGS.find(r => r.v === sr.value).m; sC++; }
+    if (mr) { mT += PDF_RATINGS.find(r => r.v === mr.value).m; mC++; }
+  });
+  const sAvg = sC ? (sT / sC).toFixed(1) + '%' : '—';
+  const mAvg = mC ? (mT / mC).toFixed(1) + '%' : '—';
+  document.getElementById('pdf-staff-avg').textContent = sAvg;
+  document.getElementById('pdf-mgr-avg').textContent   = mAvg;
+  const scoreEl = document.getElementById('pdf-score');
+  if (mC) {
+    const s = parseFloat(mAvg);
+    scoreEl.textContent = s + '%';
+    scoreEl.style.color = s >= 91 ? '#6c3483' : s >= 81 ? '#1a5276' : s >= 71 ? '#1e7e44' : s >= 61 ? '#d35400' : '#c0392b';
+  } else {
+    scoreEl.textContent = '—';
+    scoreEl.style.color = 'var(--navy)';
+  }
+}
+
+/* ── Download PDF ──────────────────────────────────────────────── */
+async function downloadPDF() {
+  const btn = document.getElementById('download-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generating…';
+
+  const empName = document.getElementById('p-name').value.trim() || 'Employee';
+  const dateStr  = document.getElementById('p-date').value || new Date().toISOString().split('T')[0];
+  const filename = `Performance_Evaluation_${empName.replace(/\s+/g,'_')}_${dateStr}.pdf`;
+
+  const opt = {
+    margin:      [8, 8, 8, 8],
+    filename:    filename,
+    image:       { type: 'jpeg', quality: 0.97 },
+    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+    jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  try {
+    await html2pdf().set(opt).from(document.getElementById('form-sheet')).save();
+  } catch (err) {
+    alert('PDF generation failed. Try using the Print button (Ctrl/Cmd+P) and choose "Save as PDF" in the dialog.');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '&#11015; Download PDF';
+}
+
+/* ── Email HR ──────────────────────────────────────────────────── */
+function emailHR() {
+  const name = document.getElementById('p-name').value.trim() || '[Employee Name]';
+  const dept = document.getElementById('p-dept').value.trim() || '[Department]';
+  const subject = encodeURIComponent(`Performance Appraisal Form — ${name}`);
+  const body = encodeURIComponent(
+    `Dear HR Manager,\n\nPlease find attached the completed Performance Appraisal Form for ${name} (${dept}).\n\nNote: Please download the PDF using the "Download PDF" button on the appraisal form page before attaching it to this email.\n\nKind regards,\n[Your Name]`
+  );
+  window.location.href = `mailto:hr@zanzibarbeachvillage.com?subject=${subject}&body=${body}`;
+}
+</script>
+</body>
+</html>
