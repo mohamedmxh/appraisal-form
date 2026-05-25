@@ -3,579 +3,671 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Performance Evaluation — Zanzibar Beach Village Ltd.</title>
+  <title>Cluster Performance Evaluation — The Mora &amp; TUI BLUE Bahari</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <style>
+    /* ══ Design tokens ══════════════════════════════════════ */
     :root {
-      --navy:        #1e3a5f;
-      --navy-dark:   #13273f;
+      --mora-bg:     #f9d4cf;
+      --mora-dark:   #7a3a32;
+      --mora-text:   #2c1810;
+      --tui-bg:      #1a2d5a;
+      --tui-bright:  #2a4698;
       --gold:        #c8a055;
-      --gold-light:  #e8d4a0;
+      --gold-light:  #e8d5a4;
       --gold-pale:   #f7f0e0;
       --cream:       #faf7f2;
       --white:       #ffffff;
       --text:        #1a1a1a;
       --muted:       #6b6860;
       --border:      #d9ccb2;
-      --border-light:#ede4d0;
-      --red:         #c0392b;
-      --orange:      #d35400;
-      --yellow-dark: #b8860b;
-      --green:       #1e7e44;
-      --blue:        #1a5276;
-      --purple:      #6c3483;
-      --shadow-sm:   0 1px 4px rgba(0,0,0,.07);
-      --shadow-md:   0 4px 20px rgba(0,0,0,.09);
+      --border-lt:   #ede4d0;
+      --navy:        #1e3a5f;
+      --green-bg:    #e8f5e9;
+      --green-text:  #2e7d32;
+      --green-border:#a5d6a7;
+      --amber-bg:    #fff8e1;
+      --amber-text:  #f57c00;
+      --amber-border:#ffe082;
+      --readonly-bg: #f5f4f0;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      background: var(--cream);
+      background: #ede8de;
       color: var(--text);
-      line-height: 1.55;
       -webkit-font-smoothing: antialiased;
     }
 
-    /* ── Top Navigation ────────────────────────────────────── */
-    .topbar {
-      background: var(--navy-dark);
-      padding: 11px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: 0;
-      z-index: 200;
-      box-shadow: 0 2px 10px rgba(0,0,0,.25);
-    }
-    .topbar-brand {
-      color: var(--gold-light);
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: .8px;
-      text-transform: uppercase;
-    }
-    .topbar-actions { display: flex; gap: 8px; }
+    /* ══ Phase body classes ═════════════════════════════════ */
+    /* Phase 1: hide manager-only elements */
+    body.phase-employee .mgr-only          { display: none !important; }
+    body.phase-employee .mgr-col           { display: none !important; }
+    body.phase-employee .mgr-col-head      { display: none !important; }
+    /* Phase 2: hide employee-only elements; lock employee inputs */
+    body.phase-manager  .emp-only          { display: none !important; }
+    body.phase-manager  .emp-field input,
+    body.phase-manager  .emp-field select,
+    body.phase-manager  .emp-field textarea { background: var(--readonly-bg) !important; color: var(--muted) !important; pointer-events: none; cursor: default; }
+    body.phase-manager  .emp-rating input  { pointer-events: none; cursor: default; opacity: .65; }
+    body.phase-manager  .emp-comment       { pointer-events: none; background: var(--readonly-bg) !important; color: var(--muted) !important; cursor: default; }
+    body.phase-manager  .purpose-cb        { pointer-events: none; opacity: .7; }
+    body.phase-manager  .hotel-btn         { pointer-events: none; }
 
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 7px 15px;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      transition: background .15s, color .15s;
-      text-decoration: none;
-      font-family: inherit;
+    /* ══ Sticky toolbar ══════════════════════════════════════ */
+    .toolbar {
+      background: var(--navy);
+      padding: 10px 22px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 300;
+      box-shadow: 0 2px 12px rgba(0,0,0,.3);
     }
-    .btn-gold   { background: var(--gold); color: var(--navy-dark); }
-    .btn-gold:hover { background: #b88c44; }
-    .btn-ghost  { background: transparent; color: var(--gold-light); border: 1px solid rgba(232,212,160,.4); }
-    .btn-ghost:hover { background: rgba(200,160,85,.12); }
-    .btn-danger { background: transparent; color: #e74c3c; border: 1px solid rgba(231,76,60,.4); }
-    .btn-danger:hover { background: rgba(231,76,60,.08); }
+    .toolbar-left { display: flex; align-items: center; gap: 12px; }
+    .toolbar-brand { color: rgba(255,255,255,.75); font-size: 12px; font-weight: 500; }
+
+    /* Progress steps */
+    .steps { display: flex; align-items: center; gap: 0; }
+    .step {
+      display: flex; align-items: center; gap: 6px;
+      padding: 5px 12px; border-radius: 12px;
+      font-size: 11px; font-weight: 600; color: rgba(255,255,255,.45);
+    }
+    .step.active { background: rgba(255,255,255,.12); color: white; }
+    .step.done   { color: #81c784; }
+    .step-num {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: currentColor; opacity: .6;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 800; color: var(--navy);
+    }
+    .step.active .step-num { opacity: 1; }
+    .step-arrow { color: rgba(255,255,255,.2); margin: 0 4px; font-size: 14px; }
+
+    .toolbar-actions { display: flex; gap: 8px; }
+
+    /* ══ Buttons ════════════════════════════════════════════ */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 15px; border-radius: 6px;
+      font-size: 13px; font-weight: 600;
+      cursor: pointer; border: none; font-family: inherit;
+      text-decoration: none; transition: all .15s;
+      white-space: nowrap;
+    }
+    .btn:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-ghost  { background: transparent; color: rgba(255,255,255,.75); border: 1px solid rgba(255,255,255,.25); }
+    .btn-ghost:hover:not(:disabled)  { background: rgba(255,255,255,.1); }
+    .btn-gold   { background: var(--gold); color: var(--navy); }
+    .btn-gold:hover:not(:disabled)   { background: #b08040; }
+    .btn-green  { background: #2e7d32; color: white; }
+    .btn-green:hover:not(:disabled)  { background: #1b5e20; }
+    .btn-tui    { background: var(--tui-bg); color: white; }
+    .btn-tui:hover:not(:disabled)    { background: var(--tui-bright); }
+    .btn-danger { background: transparent; color: #e53935; border: 1px solid rgba(229,57,53,.35); }
+    .btn-danger:hover { background: rgba(229,57,53,.06); }
     .btn-lg { padding: 11px 22px; font-size: 14px; }
 
-    /* ── Page wrapper ──────────────────────────────────────── */
-    .page { max-width: 980px; margin: 0 auto; padding: 28px 16px 72px; }
+    /* ══ Page ════════════════════════════════════════════════ */
+    .page { max-width: 990px; margin: 0 auto; padding: 24px 14px 80px; }
 
-    /* ── Form card ─────────────────────────────────────────── */
+    /* ══ Form card ══════════════════════════════════════════ */
     .form-card {
       background: var(--white);
       border-radius: 10px;
       overflow: hidden;
-      box-shadow: var(--shadow-md);
+      box-shadow: 0 6px 32px rgba(0,0,0,.1);
     }
 
-    /* ── Header ────────────────────────────────────────────── */
+    /* ══ Dual-logo header ═══════════════════════════════════ */
     .form-header {
-      background: var(--navy);
-      color: white;
-      padding: 36px 36px 28px;
-      position: relative;
-    }
-    .header-inner { text-align: center; }
-    .logo-circle {
-      width: 60px; height: 60px;
-      background: rgba(200,160,85,.2);
-      border: 2px solid var(--gold);
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 26px;
-      margin: 0 auto 14px;
-    }
-    .company-name { font-size: 22px; font-weight: 700; letter-spacing: .3px; }
-    .company-sub  { font-size: 13px; color: rgba(255,255,255,.65); margin-top: 3px; }
-    .form-title   {
-      margin-top: 14px;
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      color: var(--gold);
+      display: grid;
+      grid-template-columns: 106px 1fr 106px;
+      align-items: center;
+      gap: 20px;
+      padding: 22px 28px;
+      background: linear-gradient(135deg, #1e3060 0%, #1a2d5a 60%, #0f1e3e 100%);
     }
 
-    .score-badge {
-      position: absolute;
-      top: 22px; right: 24px;
-      background: white;
-      border-radius: 10px;
-      padding: 10px 16px;
+    .logo-mora {
+      background: var(--mora-bg);
+      border-radius: 8px;
+      padding: 12px 10px;
       text-align: center;
-      min-width: 82px;
-      box-shadow: 0 2px 10px rgba(0,0,0,.15);
     }
-    .score-badge-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
-    .score-badge-value { font-size: 26px; font-weight: 800; color: var(--navy); line-height: 1.1; margin-top: 2px; }
+    .mora-the  { font: italic 10px/1 Georgia, serif; letter-spacing: 2px; color: #8a4a42; text-transform: lowercase; }
+    .mora-name { font: italic 300 20px/1.1 Georgia, serif; letter-spacing: 3px; color: var(--mora-text); margin-top: 4px; }
 
-    /* ── Section ───────────────────────────────────────────── */
-    .section { border-top: 1px solid var(--border-light); }
+    .logo-tui {
+      background: rgba(255,255,255,.07);
+      border: 1.5px solid rgba(255,255,255,.15);
+      border-radius: 8px;
+      padding: 10px 10px;
+      text-align: center;
+    }
+    .tui-symbol { font: 900 22px/1 'Arial Black', Arial, sans-serif; color: white; letter-spacing: -1px; }
+    .tui-label  { font: 600 7.5px/1 inherit; letter-spacing: 3px; color: rgba(255,255,255,.75); text-transform: uppercase; margin-top: 5px; }
 
+    .header-center { text-align: center; }
+    .cluster-chip {
+      display: inline-block;
+      background: rgba(200,160,85,.18);
+      color: var(--gold-light);
+      font-size: 9px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 2.5px;
+      padding: 3px 12px; border-radius: 10px;
+      border: 1px solid rgba(200,160,85,.3);
+      margin-bottom: 8px;
+    }
+    .header-title { font-size: 18px; font-weight: 700; color: white; }
+    .header-sub   { font-size: 11px; color: rgba(255,255,255,.55); margin-top: 4px; }
+
+    /* ══ Phase banner ═══════════════════════════════════════ */
+    .phase-banner {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 22px; font-size: 13px; font-weight: 600;
+    }
+    .phase-banner.employee { background: var(--amber-bg); color: var(--amber-text); border-bottom: 1px solid var(--amber-border); }
+    .phase-banner.manager  { background: var(--green-bg); color: var(--green-text); border-bottom: 1px solid var(--green-border); }
+    .phase-banner span.note { font-weight: 400; margin-left: 4px; }
+
+    /* ══ Hotel selector ══════════════════════════════════════ */
+    .hotel-bar {
+      display: flex; align-items: center;
+      gap: 14px; padding: 14px 24px;
+      background: #f0ece3;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .hotel-bar-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); white-space: nowrap; }
+    .hotel-btns { display: flex; gap: 8px; }
+    .hotel-btn {
+      padding: 8px 18px; border-radius: 20px;
+      border: 2px solid var(--border); font-size: 13px; font-weight: 600;
+      cursor: pointer; background: white; font-family: inherit;
+      transition: all .15s; display: flex; align-items: center; gap: 7px;
+    }
+    .hotel-btn:hover { border-color: var(--navy); }
+    .hotel-btn[data-hotel="mora"].sel  { border-color: var(--mora-dark); background: #fef5f4; color: var(--mora-dark); }
+    .hotel-btn[data-hotel="tui"].sel   { border-color: var(--tui-bg);   background: #eff3fb; color: var(--tui-bg); }
+    .hotel-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .hotel-dot.mora { background: var(--mora-dark); }
+    .hotel-dot.tui  { background: var(--tui-bg); }
+    #hotel-select { display: none; } /* hidden backing select */
+
+    /* ══ Form section ════════════════════════════════════════ */
+    .section { border-top: 1px solid var(--border-lt); }
     .section-head {
       background: var(--gold-pale);
-      padding: 9px 24px;
-      font-size: 10.5px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1.4px;
+      padding: 9px 22px;
+      font-size: 10.5px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.4px;
       color: #7a5c28;
       border-bottom: 1px solid var(--border);
     }
-    .section-body { padding: 20px 24px; }
+    .section-body { padding: 20px 22px; }
 
-    /* ── Employee info grid ────────────────────────────────── */
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 18px 28px;
-    }
+    /* ══ Form fields ════════════════════════════════════════ */
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 28px; }
     .field { display: flex; flex-direction: column; gap: 5px; }
     .field.full { grid-column: 1 / -1; }
-
-    .field-label {
-      font-size: 10.5px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .8px;
-      color: var(--muted);
-    }
+    .field-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
     .field-input, .field-select {
-      border: none;
-      border-bottom: 1.5px solid var(--border);
-      padding: 5px 0;
-      font-size: 14px;
-      font-family: inherit;
-      background: transparent;
-      color: var(--text);
-      outline: none;
+      border: none; border-bottom: 1.5px solid var(--border);
+      padding: 5px 0; font-size: 14px; font-family: inherit;
+      background: transparent; color: var(--text); outline: none;
       transition: border-color .15s;
     }
     .field-input:focus, .field-select:focus { border-bottom-color: var(--navy); }
-    .field-select { cursor: pointer; }
+    .period-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+    .period-lbl { font-size: 12px; color: var(--muted); white-space: nowrap; }
 
-    .period-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .period-label { font-size: 12px; color: var(--muted); white-space: nowrap; }
-
-    /* ── Purpose checkboxes ────────────────────────────────── */
-    .cb-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
+    /* ══ Purpose checkboxes ══════════════════════════════════ */
+    .cb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
     .cb-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 9px;
-      padding: 9px 11px;
-      border-radius: 6px;
-      border: 1px solid transparent;
-      cursor: pointer;
+      display: flex; align-items: flex-start; gap: 9px;
+      padding: 9px 11px; border-radius: 6px;
+      border: 1px solid transparent; cursor: pointer;
       transition: background .12s, border-color .12s;
     }
     .cb-item:hover { background: var(--gold-pale); border-color: var(--gold-light); }
-    .cb-item input {
-      width: 15px; height: 15px;
-      margin-top: 2px; flex-shrink: 0;
-      accent-color: var(--navy);
-      cursor: pointer;
-    }
+    .cb-item input { width: 15px; height: 15px; margin-top: 2px; flex-shrink: 0; accent-color: var(--navy); cursor: pointer; }
     .cb-text { font-size: 13px; }
 
-    /* ── Rating legend ─────────────────────────────────────── */
-    .legend-row { display: flex; flex-wrap: wrap; gap: 8px; }
-    .legend-chip {
-      padding: 5px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      white-space: nowrap;
+    /* ══ Rating legend ═══════════════════════════════════════ */
+    .legend-row { display: flex; flex-wrap: wrap; gap: 7px; }
+    .chip {
+      padding: 5px 12px; border-radius: 20px;
+      font-size: 11.5px; font-weight: 600; white-space: nowrap;
     }
-    .chip-unacceptable { background: #fdecea; color: var(--red); }
-    .chip-minimal      { background: #fef0e6; color: var(--orange); }
-    .chip-achieved     { background: #eaf8ee; color: var(--green); }
-    .chip-exceeded     { background: #e8f4fd; color: var(--blue); }
-    .chip-excellent    { background: #f5eefb; color: var(--purple); }
+    .chip-unacceptable { background: #fdecea; color: #c0392b; }
+    .chip-minimal      { background: #fef0e6; color: #d35400; }
+    .chip-achieved     { background: #eaf8ee; color: #1e7e44; }
+    .chip-exceeded     { background: #e8f4fd; color: #1a5276; }
+    .chip-excellent    { background: #f5eefb; color: #6c3483; }
 
-    /* ── Performance table ─────────────────────────────────── */
-    .factors-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    .factors-table thead th {
-      background: var(--gold-pale);
-      padding: 10px 14px;
-      font-size: 10.5px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .8px;
-      color: #7a5c28;
+    /* ══ Factors table ═══════════════════════════════════════ */
+    .factors-wrap { overflow-x: auto; }
+    .factors-tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 560px; }
+    .factors-tbl th {
+      background: var(--gold-pale); padding: 10px 14px;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .8px; color: #7a5c28;
       border: 1px solid var(--border);
     }
-    .factors-table thead th.th-factor { text-align: left; width: 52%; }
-    .factors-table thead th.th-rating { text-align: center; width: 24%; }
+    .th-factor { text-align: left; width: 50%; }
+    .th-rating { text-align: center; width: 25%; }
 
-    .factor-row td { border: 1px solid var(--border-light); vertical-align: top; }
+    .factor-row td { border: 1px solid var(--border-lt); vertical-align: top; }
     .factor-row:nth-child(odd) .td-factor { background: #fdfbf8; }
 
-    .td-factor { padding: 14px 16px; }
-    .td-rating { padding: 12px 10px; vertical-align: middle; }
+    .td-factor { padding: 13px 15px; }
+    .td-rating { padding: 11px 9px; vertical-align: middle; }
 
-    .factor-header { display: flex; align-items: flex-start; gap: 8px; }
-    .factor-num {
-      flex-shrink: 0;
-      width: 22px; height: 22px;
-      background: var(--navy);
-      color: white;
-      font-size: 11px; font-weight: 700;
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
+    .factor-hdr { display: flex; align-items: flex-start; gap: 8px; }
+    .factor-badge {
+      flex-shrink: 0; width: 21px; height: 21px;
+      background: var(--navy); color: white;
+      font-size: 10px; font-weight: 700;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
       margin-top: 1px;
     }
-    .factor-name { font-weight: 700; color: var(--navy); }
-    .factor-desc { font-size: 11.5px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+    .factor-name { font-weight: 700; color: var(--navy); font-size: 12.5px; }
+    .factor-desc { font-size: 11.5px; color: var(--muted); margin-top: 4px; line-height: 1.45; }
 
-    .comment-row { margin-top: 10px; }
-    .comment-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); }
+    .comment-block { margin-top: 9px; }
+    .comment-lbl { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
     .comment-input {
-      width: 100%;
-      border: none;
-      border-bottom: 1px solid var(--border);
-      padding: 4px 0;
-      font-size: 12px;
-      font-family: inherit;
-      background: transparent;
-      outline: none;
-      color: var(--text);
-      margin-top: 3px;
+      width: 100%; border: none; border-bottom: 1px solid var(--border);
+      padding: 4px 0; font-size: 12px; font-family: inherit;
+      background: transparent; outline: none; color: var(--text); margin-top: 3px;
+    }
+    .mgr-notes-block {
+      margin-top: 8px;
+      padding-top: 7px;
+      border-top: 1px dashed var(--border-lt);
+    }
+    .mgr-notes-lbl { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--tui-bright); }
+    .mgr-notes-input {
+      width: 100%; border: none; border-bottom: 1px solid var(--tui-bright);
+      padding: 4px 0; font-size: 12px; font-family: inherit;
+      background: transparent; outline: none; color: var(--text); margin-top: 3px;
     }
 
     /* Rating buttons */
     .rating-group { display: flex; flex-direction: column; gap: 3px; }
-    .rating-btn {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      padding: 4px 8px;
-      border-radius: 5px;
-      cursor: pointer;
+    .r-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 7px; border-radius: 4px; cursor: pointer;
       transition: background .1s;
     }
-    .rating-btn:hover { background: var(--gold-pale); }
-    .rating-btn input { width: 13px; height: 13px; flex-shrink: 0; accent-color: var(--navy); cursor: pointer; }
-    .rating-btn-text { font-size: 11px; font-weight: 600; color: var(--muted); }
+    .r-btn:hover { background: var(--gold-pale); }
+    .r-btn input { width: 12px; height: 12px; flex-shrink: 0; accent-color: var(--navy); cursor: pointer; }
+    .r-lbl { font-size: 11px; font-weight: 600; color: var(--muted); }
 
     /* selected states */
-    .rb-sel-below60  { background: #fdecea !important; }
-    .rb-sel-below60  .rating-btn-text { color: var(--red) !important; }
-    .rb-sel-60-69    { background: #fef0e6 !important; }
-    .rb-sel-60-69    .rating-btn-text { color: var(--orange) !important; }
-    .rb-sel-70-79    { background: #fffde7 !important; }
-    .rb-sel-70-79    .rating-btn-text { color: var(--yellow-dark) !important; }
-    .rb-sel-80-89    { background: #eaf8ee !important; }
-    .rb-sel-80-89    .rating-btn-text { color: var(--green) !important; }
-    .rb-sel-90-100   { background: #e8f4fd !important; }
-    .rb-sel-90-100   .rating-btn-text { color: var(--blue) !important; }
+    .rs-below60 { background: #fdecea !important; } .rs-below60 .r-lbl { color: #c0392b !important; }
+    .rs-60-69   { background: #fef0e6 !important; } .rs-60-69   .r-lbl { color: #d35400 !important; }
+    .rs-70-79   { background: #fffde7 !important; } .rs-70-79   .r-lbl { color: #b8860b !important; }
+    .rs-80-89   { background: #eaf8ee !important; } .rs-80-89   .r-lbl { color: #1e7e44 !important; }
+    .rs-90-100  { background: #e8f4fd !important; } .rs-90-100  .r-lbl { color: #1a5276 !important; }
 
-    /* Total row */
+    /* total row */
     .total-row td {
-      background: var(--navy);
-      color: white;
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .8px;
-      padding: 12px 16px;
-      text-align: center;
+      background: var(--navy); color: white;
+      font-weight: 700; font-size: 12px;
+      text-transform: uppercase; letter-spacing: .8px;
+      padding: 11px 15px; text-align: center;
       border: 1px solid var(--navy);
     }
     .total-row td:first-child { text-align: right; }
 
-    /* ── Textarea ───────────────────────────────────────────── */
+    /* ══ Score badge ════════════════════════════════════════ */
+    .score-row {
+      display: flex; align-items: center; justify-content: flex-end;
+      padding: 10px 22px 0;
+      gap: 20px;
+    }
+    .score-box {
+      background: white;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 16px;
+      text-align: center;
+      min-width: 72px;
+    }
+    .score-box-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+    .score-box-val { font-size: 22px; font-weight: 800; color: var(--navy); line-height: 1.1; margin-top: 2px; }
+
+    /* ══ Textarea ═══════════════════════════════════════════ */
     .form-textarea {
-      width: 100%;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px 12px;
-      font-size: 13px;
-      font-family: inherit;
-      resize: vertical;
-      min-height: 72px;
-      outline: none;
-      background: #fdfcfa;
-      transition: border-color .15s;
-      color: var(--text);
+      width: 100%; border: 1px solid var(--border); border-radius: 6px;
+      padding: 10px 12px; font-size: 13px; font-family: inherit;
+      resize: vertical; min-height: 68px;
+      outline: none; background: #fdfcfa;
+      transition: border-color .15s; color: var(--text);
     }
     .form-textarea:focus { border-color: var(--navy); background: white; }
-
+    .form-textarea[readonly], .form-textarea:disabled {
+      background: var(--readonly-bg) !important;
+      color: var(--muted) !important;
+      pointer-events: none;
+    }
     .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-    /* ── Recommendation ─────────────────────────────────────── */
-    .rec-option {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      padding: 14px 16px;
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
-      cursor: pointer;
+    /* ══ Recommendation ══════════════════════════════════════ */
+    .rec-opt {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 13px 16px; border: 1.5px solid var(--border);
+      border-radius: 8px; cursor: pointer;
       transition: border-color .15s, background .15s;
       margin-bottom: 10px;
     }
-    .rec-option:last-child { margin-bottom: 0; }
-    .rec-option:hover { border-color: var(--gold); background: var(--gold-pale); }
-    .rec-option.is-selected { border-color: var(--navy); background: rgba(30,58,95,.04); }
-    .rec-option input { width: 17px; height: 17px; flex-shrink: 0; margin-top: 2px; accent-color: var(--navy); cursor: pointer; }
+    .rec-opt:last-child { margin-bottom: 0; }
+    .rec-opt:hover { border-color: var(--gold); background: var(--gold-pale); }
+    .rec-opt.sel   { border-color: var(--navy); background: rgba(30,58,95,.04); }
+    .rec-opt input { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; accent-color: var(--navy); cursor: pointer; }
     .rec-title { font-size: 13px; font-weight: 600; }
     .rec-sub   { font-size: 12px; color: var(--muted); margin-top: 3px; }
-    .rec-date  { display: none; margin-top: 10px; font-size: 12px; color: var(--muted); align-items: center; gap: 8px; }
+    .rec-date  { display: none; margin-top: 8px; font-size: 12px; color: var(--muted); align-items: center; gap: 8px; }
 
-    /* ── Signatures ─────────────────────────────────────────── */
-    .sig-block { display: flex; gap: 20px; margin-bottom: 18px; }
-    .sig-block:last-child { margin-bottom: 0; }
+    /* ══ Signatures ══════════════════════════════════════════ */
+    .sig-row { display: flex; gap: 20px; margin-bottom: 18px; }
+    .sig-row:last-child { margin-bottom: 0; }
     .sig-name { flex: 2; }
     .sig-date { flex: 1; }
-    .sig-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); margin-bottom: 4px; }
-    .sig-line { height: 32px; border-bottom: 1.5px solid var(--border); }
+    .sig-lbl  { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); margin-bottom: 4px; }
+    .sig-line { height: 30px; border-bottom: 1.5px solid var(--border); }
 
     .notice-box {
-      font-size: 12px;
-      font-style: italic;
-      color: var(--muted);
-      background: var(--gold-pale);
+      font-size: 12px; font-style: italic; color: var(--muted);
+      padding: 10px 14px; background: var(--gold-pale);
       border-left: 3px solid var(--gold);
-      padding: 10px 14px;
-      border-radius: 0 6px 6px 0;
-      margin-bottom: 20px;
+      border-radius: 0 6px 6px 0; margin-bottom: 20px;
     }
 
-    /* ── Form actions ───────────────────────────────────────── */
-    .form-actions {
-      padding: 20px 24px;
-      background: var(--gold-pale);
+    /* ══ Submit section (Phase 1 only) ═══════════════════════ */
+    .submit-section {
+      background: #f5f0e8;
+      border-top: 2px solid var(--gold-light);
+      padding: 22px;
+    }
+    .submit-inner {
+      max-width: 560px; margin: 0 auto; text-align: center;
+    }
+    .submit-title { font-size: 15px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+    .submit-sub   { font-size: 12.5px; color: var(--muted); margin-bottom: 18px; }
+    .submit-email-row {
+      display: flex; align-items: center;
+      background: white; border: 1.5px solid var(--border);
+      border-radius: 8px; padding: 4px 4px 4px 14px;
+      gap: 8px; margin-bottom: 12px;
+    }
+    .submit-email-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); white-space: nowrap; }
+    .submit-email-value { flex: 1; font-size: 13px; font-weight: 600; color: var(--navy); }
+
+    /* ══ Action bar (Phase 2 only) ═══════════════════════════ */
+    .action-bar {
+      padding: 20px 22px;
+      background: #f0ece3;
       border-top: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 10px;
-      flex-wrap: wrap;
+      display: flex; align-items: center;
+      justify-content: space-between;
+      gap: 12px; flex-wrap: wrap;
     }
+    .action-info { font-size: 12px; color: var(--muted); }
+    .action-btns { display: flex; gap: 10px; flex-wrap: wrap; }
 
-    /* ── Print styles ───────────────────────────────────────── */
+    /* ══ HR email row ════════════════════════════════════════ */
+    .hr-email-banner {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 16px;
+      background: #e8f4fd; border-radius: 6px;
+      font-size: 12px; margin-top: 10px;
+    }
+    .hr-email-lbl { font-weight: 700; color: #1a5276; white-space: nowrap; }
+    .hr-email-val { color: #1a5276; word-break: break-all; }
+
+    /* ══ Print / PDF ════════════════════════════════════════ */
     @media print {
-      .topbar, .form-actions { display: none !important; }
+      .toolbar, .hotel-bar, .phase-banner,
+      .submit-section, .action-bar, .mgr-only.emp-only { display: none !important; }
       body { background: white; }
       .page { padding: 0; max-width: 100%; }
       .form-card { box-shadow: none; border-radius: 0; }
-      .section { page-break-inside: avoid; }
-      .factor-row { page-break-inside: avoid; }
+      .section, .factor-row { page-break-inside: avoid; }
+      /* Show all columns when printing */
+      .mgr-col, .mgr-col-head { display: table-cell !important; }
     }
 
-    /* ── Responsive ─────────────────────────────────────────── */
+    /* ══ Responsive ═════════════════════════════════════════ */
     @media (max-width: 640px) {
+      .form-header { grid-template-columns: 80px 1fr 80px; padding: 16px 14px; gap: 12px; }
+      .header-title { font-size: 14px; }
       .info-grid, .cb-grid, .two-col { grid-template-columns: 1fr; }
       .field.full { grid-column: 1; }
-      .score-badge { display: none; }
-      .form-header { padding: 24px 16px 20px; }
-      .section-body { padding: 16px; }
-      .topbar-brand { display: none; }
+      .toolbar-brand { display: none; }
+      .score-row { padding: 8px 14px 0; }
     }
   </style>
 </head>
-<body>
+<body class="phase-employee">
 
-<!-- ═══ Top bar ═══════════════════════════════════════════════ -->
-<nav class="topbar">
-  <span class="topbar-brand">&#127796; Zanzibar Beach Village — Performance Evaluation</span>
-  <div class="topbar-actions">
-    <a href="pdf-form.html" class="btn btn-ghost">&#128196; PDF Version</a>
-    <button type="button" class="btn btn-gold" onclick="window.print()">&#128424; Print / Save PDF</button>
+<!-- ═══ Toolbar ════════════════════════════════════════════════ -->
+<nav class="toolbar">
+  <div class="toolbar-left">
+    <span class="toolbar-brand">Cluster HR — Performance Evaluation</span>
+    <div class="steps">
+      <div class="step active" id="step1"><span class="step-num">1</span> Employee</div>
+      <span class="step-arrow">›</span>
+      <div class="step" id="step2"><span class="step-num">2</span> Manager Review</div>
+      <span class="step-arrow">›</span>
+      <div class="step" id="step3"><span class="step-num">3</span> Submit to HR</div>
+    </div>
+  </div>
+  <div class="toolbar-actions">
+    <a href="pdf-form.html" class="btn btn-ghost">&#128196; Blank PDF Form</a>
+    <button type="button" class="btn btn-gold mgr-only" onclick="generatePDF()" id="download-btn">&#11015; Download PDF</button>
   </div>
 </nav>
 
 <div class="page">
 <form id="appraisal-form" class="form-card" novalidate>
 
-  <!-- ── Header ───────────────────────────────────────────────── -->
+  <!-- ═══ Dual Logo Header ═══════════════════════════════════ -->
   <header class="form-header">
-    <div class="header-inner">
-      <div class="logo-circle">&#127796;</div>
-      <div class="company-name">Zanzibar Beach Village Ltd.</div>
-      <div class="company-sub">P.O. BOX 3498, Zanzibar</div>
-      <div class="form-title">Performance Evaluation</div>
+    <!-- The Mora logo -->
+    <div class="logo-mora">
+      <div class="mora-the">the</div>
+      <div class="mora-name">mora</div>
+      <div style="font:600 7px/1.2 inherit;letter-spacing:1.5px;color:#8a5a54;text-transform:uppercase;margin-top:5px">Zanzibar</div>
     </div>
-    <div class="score-badge">
-      <div class="score-badge-label">% Score</div>
-      <div class="score-badge-value" id="score-display">&mdash;</div>
+    <!-- Centre -->
+    <div class="header-center">
+      <div class="cluster-chip">&#9733; Cluster Team</div>
+      <div class="header-title">Performance Evaluation</div>
+      <div class="header-sub">The Mora Zanzibar &amp; TUI BLUE Bahari</div>
+    </div>
+    <!-- TUI BLUE logo -->
+    <div class="logo-tui">
+      <div class="tui-symbol">BUE</div>
+      <div class="tui-label">TUI BLUE</div>
+      <div style="font:600 6.5px/1.4 inherit;letter-spacing:1.5px;color:rgba(255,255,255,.55);margin-top:4px;text-transform:uppercase">Bahari</div>
     </div>
   </header>
 
-  <!-- ── Employee Information ─────────────────────────────────── -->
+  <!-- Phase 1 banner -->
+  <div class="phase-banner employee emp-only">
+    &#9998; <strong>Employee Self-Assessment</strong>
+    <span class="note">— Fill in your details and self-ratings, then click <em>Submit to Manager</em> at the bottom.</span>
+  </div>
+
+  <!-- Phase 2 banner -->
+  <div class="phase-banner manager mgr-only" id="mgr-banner">
+    &#10003; <strong>Manager Review Mode</strong>
+    <span class="note" id="mgr-banner-name">— Employee data is pre-filled (read-only). Complete your ratings and evaluation below.</span>
+  </div>
+
+  <!-- ═══ Hotel Selector ═════════════════════════════════════ -->
+  <div class="hotel-bar">
+    <span class="hotel-bar-label">&#127970; Hotel:</span>
+    <div class="hotel-btns">
+      <button type="button" class="hotel-btn" data-hotel="mora" onclick="selectHotel('mora')">
+        <span class="hotel-dot mora"></span> The Mora Zanzibar
+      </button>
+      <button type="button" class="hotel-btn" data-hotel="tui" onclick="selectHotel('tui')">
+        <span class="hotel-dot tui"></span> TUI BLUE Bahari
+      </button>
+    </div>
+    <select id="hotel-select" name="hotel"></select>
+  </div>
+
+  <!-- ═══ Employee Information ════════════════════════════════ -->
   <section class="section">
     <div class="section-head">Employee Information</div>
     <div class="section-body">
       <div class="info-grid">
-
-        <div class="field">
+        <div class="field emp-field">
           <label class="field-label" for="emp-name">Employee Name</label>
           <input type="text" id="emp-name" class="field-input" placeholder="Full name">
         </div>
-
-        <div class="field">
+        <div class="field emp-field">
           <label class="field-label" for="payroll-no">Payroll No.</label>
           <input type="text" id="payroll-no" class="field-input" placeholder="e.g. ZBV-0001">
         </div>
-
-        <div class="field">
+        <div class="field emp-field">
           <label class="field-label" for="job-title">Job Title</label>
           <input type="text" id="job-title" class="field-input" placeholder="Position / role">
         </div>
-
-        <div class="field">
+        <div class="field emp-field">
           <label class="field-label" for="appraisal-date">Date</label>
           <input type="date" id="appraisal-date" class="field-input">
         </div>
-
-        <div class="field">
+        <div class="field emp-field">
           <label class="field-label" for="department">Department</label>
-          <input type="text" id="department" class="field-input" placeholder="Department name">
+          <input type="text" id="department" class="field-input" placeholder="e.g. F&amp;B, Housekeeping">
         </div>
-
-        <div class="field">
-          <label class="field-label" for="manager">Manager / Appraiser</label>
-          <input type="text" id="manager" class="field-input" placeholder="Manager's name">
+        <div class="field emp-field">
+          <label class="field-label" for="manager-name">Manager / Appraiser</label>
+          <input type="text" id="manager-name" class="field-input" placeholder="Manager's name">
         </div>
-
-        <div class="field full">
+        <div class="field full emp-field">
           <label class="field-label">Review Period</label>
-          <div class="period-row" style="margin-top:6px">
-            <select id="review-type" class="field-select" style="width:210px">
-              <option value="">Select type…</option>
+          <div class="period-row">
+            <select id="review-type" class="field-select" style="width:220px">
+              <option value="">Select review type…</option>
               <option value="03-probation">03 Months — Probation</option>
               <option value="06-months">06 Months Contract</option>
               <option value="1-year">1 Year Contract</option>
             </select>
-            <span class="period-label">From:</span>
+            <span class="period-lbl">From:</span>
             <input type="date" id="period-from" class="field-input" style="flex:1;min-width:120px">
-            <span class="period-label">To:</span>
+            <span class="period-lbl">To:</span>
             <input type="date" id="period-to" class="field-input" style="flex:1;min-width:120px">
           </div>
         </div>
-
       </div>
     </div>
   </section>
 
-  <!-- ── Purpose of Appraisal ─────────────────────────────────── -->
+  <!-- ═══ Purpose of Appraisal ═══════════════════════════════ -->
   <section class="section">
-    <div class="section-head">Purpose of Appraisal &mdash; tick &#10003; where appropriate</div>
+    <div class="section-head">Purpose of Appraisal — Tick ✓ where appropriate</div>
     <div class="section-body">
       <div class="cb-grid">
-        <label class="cb-item">
-          <input type="checkbox" name="purpose" value="review-performance">
+        <label class="cb-item purpose-cb">
+          <input type="checkbox" name="purpose" value="review-performance" class="emp-field">
           <span class="cb-text">Review Job Performance during their first 3 months (probation)</span>
         </label>
-        <label class="cb-item">
-          <input type="checkbox" name="purpose" value="job-objectives">
+        <label class="cb-item purpose-cb">
+          <input type="checkbox" name="purpose" value="job-objectives" class="emp-field">
           <span class="cb-text">Agree on Job Objectives for Coming Periods</span>
         </label>
-        <label class="cb-item">
-          <input type="checkbox" name="purpose" value="career">
+        <label class="cb-item purpose-cb">
+          <input type="checkbox" name="purpose" value="career" class="emp-field">
           <span class="cb-text">Discuss Career Aspirations of the employee</span>
         </label>
-        <label class="cb-item">
-          <input type="checkbox" name="purpose" value="training">
+        <label class="cb-item purpose-cb">
+          <input type="checkbox" name="purpose" value="training" class="emp-field">
           <span class="cb-text">Identify Staff's Training &amp; Development Needs</span>
         </label>
-        <label class="cb-item">
-          <input type="checkbox" name="purpose" value="standard">
+        <label class="cb-item purpose-cb">
+          <input type="checkbox" name="purpose" value="standard" class="emp-field">
           <span class="cb-text">Set Performance Standard Before Next Review</span>
         </label>
-        <label class="cb-item">
-          <input type="checkbox" name="purpose" value="renewal">
+        <label class="cb-item purpose-cb">
+          <input type="checkbox" name="purpose" value="renewal" class="emp-field">
           <span class="cb-text">Possibility of Renewal of Contract</span>
         </label>
-        <label class="cb-item">
-          <input type="checkbox" name="purpose" value="new-staff">
+        <label class="cb-item purpose-cb">
+          <input type="checkbox" name="purpose" value="new-staff" class="emp-field">
           <span class="cb-text">New Staff</span>
         </label>
       </div>
     </div>
   </section>
 
-  <!-- ── Rating Scale ──────────────────────────────────────────── -->
+  <!-- ═══ Rating Scale ════════════════════════════════════════ -->
   <section class="section">
     <div class="section-head">Rating Scale</div>
     <div class="section-body">
       <div class="legend-row">
-        <span class="legend-chip chip-excellent">91–100 = Achieved Excellence</span>
-        <span class="legend-chip chip-exceeded">81–90 = Exceeded Expectations</span>
-        <span class="legend-chip chip-achieved">71–80 = Achieved Expectations</span>
-        <span class="legend-chip chip-minimal">61–70 = Minimally Satisfactory</span>
-        <span class="legend-chip chip-unacceptable">Below 60 = Unacceptable</span>
+        <span class="chip chip-excellent">91–100 = Achieved Excellence</span>
+        <span class="chip chip-exceeded">81–90 = Exceeded Expectations</span>
+        <span class="chip chip-achieved">71–80 = Achieved Expectations</span>
+        <span class="chip chip-minimal">61–70 = Minimally Satisfactory</span>
+        <span class="chip chip-unacceptable">Below 60 = Unacceptable</span>
       </div>
     </div>
   </section>
 
-  <!-- ── Performance Factors ──────────────────────────────────── -->
+  <!-- ═══ Score summary row ════════════════════════════════════ -->
+  <div class="score-row">
+    <div style="font-size:11px;color:var(--muted)">Live average (manager ratings drive final score)</div>
+    <div class="score-box">
+      <div class="score-box-lbl">Staff Avg</div>
+      <div class="score-box-val" id="staff-avg-val">&mdash;</div>
+    </div>
+    <div class="score-box" style="border-color:var(--navy)">
+      <div class="score-box-lbl">Manager Avg</div>
+      <div class="score-box-val" id="mgr-avg-val">&mdash;</div>
+    </div>
+  </div>
+
+  <!-- ═══ Performance Factors ══════════════════════════════════ -->
   <section class="section">
     <div class="section-head">Performance Factors</div>
-    <table class="factors-table">
-      <thead>
-        <tr>
-          <th class="th-factor">Performance Factor</th>
-          <th class="th-rating">Staff Rating</th>
-          <th class="th-rating">Manager's Rating</th>
-        </tr>
-      </thead>
-      <tbody id="factors-tbody"></tbody>
-      <tfoot>
-        <tr class="total-row">
-          <td style="text-align:right;padding-right:20px">Average Total Score</td>
-          <td id="staff-avg">&mdash;</td>
-          <td id="mgr-avg">&mdash;</td>
-        </tr>
-      </tfoot>
-    </table>
+    <div class="factors-wrap">
+      <table class="factors-tbl">
+        <thead>
+          <tr>
+            <th class="th-factor">Performance Factor &amp; Description</th>
+            <th class="th-rating emp-rating">Staff Self-Rating</th>
+            <th class="th-rating mgr-col-head mgr-col">Manager's Rating</th>
+          </tr>
+        </thead>
+        <tbody id="factors-tbody"></tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td style="text-align:right;padding-right:18px">Average Total</td>
+            <td id="staff-total">&mdash;</td>
+            <td class="mgr-col" id="mgr-total">&mdash;</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
   </section>
 
-  <!-- ── Evaluation ────────────────────────────────────────────── -->
-  <section class="section">
-    <div class="section-head">Evaluation</div>
+  <!-- ═══ Manager Evaluation (Phase 2 only) ════════════════════ -->
+  <section class="section mgr-only">
+    <div class="section-head">Manager Evaluation</div>
     <div class="section-body">
-      <div style="margin-bottom:18px">
+      <div style="margin-bottom:16px">
         <label class="field-label" style="display:block;margin-bottom:7px">General Comments</label>
         <textarea id="general-comments" class="form-textarea" rows="3"
-          placeholder="Overall observations, highlights, and areas of concern…"></textarea>
+          placeholder="Overall observations, strengths, and areas for improvement…"></textarea>
       </div>
       <div class="two-col">
         <div>
@@ -583,55 +675,50 @@
             Goals <span style="font-weight:400;text-transform:none">(as agreed by Employee &amp; Manager)</span>
           </label>
           <textarea id="goals" class="form-textarea" rows="4"
-            placeholder="List agreed performance goals for the next review period…"></textarea>
+            placeholder="Agreed performance goals for next review period…"></textarea>
         </div>
         <div>
           <label class="field-label" style="display:block;margin-bottom:7px">Training &amp; Development Plan</label>
           <textarea id="dev-plan" class="form-textarea" rows="4"
-            placeholder="Training and development activities identified…"></textarea>
+            placeholder="Training activities and development needs identified…"></textarea>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ── Recommendation ───────────────────────────────────────── -->
-  <section class="section">
-    <div class="section-head">Recommendation &mdash; select one option</div>
+  <!-- ═══ Recommendation (Phase 2 only) ═══════════════════════ -->
+  <section class="section mgr-only">
+    <div class="section-head">Recommendation — Select one option</div>
     <div class="section-body">
-
-      <label class="rec-option" id="rec-extend">
+      <label class="rec-opt" id="rec-extend">
         <input type="radio" name="recommendation" value="extend">
         <div style="flex:1">
           <div class="rec-title">Extend the Contract / Orientation Period for Further Assessment</div>
-          <div class="rec-sub">Please indicate the next review date below.</div>
+          <div class="rec-sub">Please indicate next review date.</div>
           <div class="rec-date" id="rec-date-row">
             Upcoming review to be held on:
-            <input type="date" id="next-review-date" class="field-input"
-              style="display:inline-block;width:auto;margin-left:8px">
+            <input type="date" id="next-review" class="field-input" style="display:inline-block;width:auto;margin-left:8px">
           </div>
         </div>
       </label>
-
-      <label class="rec-option" id="rec-confirm">
+      <label class="rec-opt" id="rec-confirm">
         <input type="radio" name="recommendation" value="confirm">
         <div style="flex:1">
           <div class="rec-title">Confirm / Renew Employment</div>
           <div class="rec-sub">Performance meets the required standard for confirmation or contract renewal.</div>
         </div>
       </label>
-
-      <label class="rec-option" id="rec-nonrenewal">
+      <label class="rec-opt" id="rec-nonrenewal">
         <input type="radio" name="recommendation" value="non-renewal">
         <div style="flex:1">
           <div class="rec-title">Non-Renewal</div>
           <div class="rec-sub">Contract will not be renewed at the end of the current period.</div>
         </div>
       </label>
-
     </div>
   </section>
 
-  <!-- ── Verification ──────────────────────────────────────────── -->
+  <!-- ═══ Verification ════════════════════════════════════════ -->
   <section class="section">
     <div class="section-head">Verification of Review</div>
     <div class="section-body">
@@ -639,122 +726,131 @@
         By signing this form, you confirm that you have discussed this review in detail with your manager.
         However, it does not necessarily indicate that you agree with this evaluation.
       </p>
-
-      <div class="sig-block">
-        <div class="sig-name">
-          <div class="sig-label">Employee Signature</div>
-          <div class="sig-line"></div>
+      <!-- Employee signature — editable Phase 1, readonly Phase 2 -->
+      <div class="sig-row">
+        <div class="sig-name emp-field">
+          <div class="sig-lbl">Employee Signature (type full name)</div>
+          <input type="text" id="emp-sig" class="field-input" placeholder="Type your full name">
         </div>
-        <div class="sig-date">
-          <div class="sig-label">Date</div>
-          <input type="date" class="field-input" id="sig-emp-date">
-        </div>
-      </div>
-
-      <div class="sig-block">
-        <div class="sig-name">
-          <div class="sig-label">HOD's Signature</div>
-          <div class="sig-line"></div>
-        </div>
-        <div class="sig-date">
-          <div class="sig-label">Date</div>
-          <input type="date" class="field-input" id="sig-hod-date">
+        <div class="sig-date emp-field">
+          <div class="sig-lbl">Date</div>
+          <input type="date" id="emp-sig-date" class="field-input">
         </div>
       </div>
-
-      <div class="sig-block">
+      <!-- HOD & HR signatures — Phase 2 only -->
+      <div class="sig-row mgr-only">
         <div class="sig-name">
-          <div class="sig-label">HR Manager's Signature</div>
+          <div class="sig-lbl">HOD's Signature</div>
           <div class="sig-line"></div>
         </div>
         <div class="sig-date">
-          <div class="sig-label">Date</div>
-          <input type="date" class="field-input" id="sig-hr-date">
+          <div class="sig-lbl">Date</div>
+          <input type="date" id="hod-date" class="field-input">
+        </div>
+      </div>
+      <div class="sig-row mgr-only">
+        <div class="sig-name">
+          <div class="sig-lbl">HR Manager's Signature</div>
+          <div class="sig-line"></div>
+        </div>
+        <div class="sig-date">
+          <div class="sig-lbl">Date</div>
+          <input type="date" id="hr-date" class="field-input">
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ── Actions ───────────────────────────────────────────────── -->
-  <div class="form-actions">
-    <button type="button" class="btn btn-danger" onclick="resetForm()">&#8635; Reset Form</button>
-    <a href="pdf-form.html" class="btn btn-ghost">&#128196; PDF Version</a>
-    <button type="button" class="btn btn-gold btn-lg" onclick="window.print()">&#128424; Print / Save as PDF</button>
+  <!-- ═══ Phase 1: Submit to Manager ══════════════════════════ -->
+  <div class="submit-section emp-only">
+    <div class="submit-inner">
+      <div class="submit-title">&#9993; Submit to Manager for Review</div>
+      <div class="submit-sub">Your self-assessment will be emailed to your manager as a link. The manager opens it in their browser to complete their ratings.</div>
+      <div class="submit-email-row">
+        <span class="submit-email-label">Sending to:</span>
+        <span class="submit-email-value">Mohamed Abdallah &lt;mohamed.abdallah@themora.com&gt;</span>
+      </div>
+      <button type="button" class="btn btn-tui btn-lg" style="width:100%;justify-content:center" onclick="submitToManager()">
+        &#9993;&nbsp; Submit to Manager
+      </button>
+      <div style="font-size:11px;color:var(--muted);margin-top:10px">
+        &#128274; Manager will see your data pre-filled. They cannot change your self-ratings.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Phase 2: Manager Action Bar ═════════════════════════ -->
+  <div class="action-bar mgr-only" id="mgr-action-bar">
+    <div class="action-info">
+      <div style="font-weight:700;color:var(--navy);margin-bottom:2px">Ready to finalise?</div>
+      <div>Download the PDF then email it to the correct HR team.</div>
+      <div class="hr-email-banner" id="hr-email-display" style="display:none">
+        <span class="hr-email-lbl">HR Email:</span>
+        <span class="hr-email-val" id="hr-email-text"></span>
+      </div>
+    </div>
+    <div class="action-btns">
+      <button type="button" class="btn btn-danger" onclick="if(confirm('Reset all fields?')) { location.href = location.pathname; }">&#8635; Reset</button>
+      <button type="button" class="btn btn-gold btn-lg" onclick="generatePDF()" id="download-btn2">&#11015; Download PDF</button>
+      <button type="button" class="btn btn-green btn-lg" onclick="emailToHR()">&#9993; Email to HR</button>
+    </div>
   </div>
 
 </form>
 </div><!-- .page -->
 
 <script>
-/* ── Performance factor definitions ─────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   Configuration
+══════════════════════════════════════════════════════════════ */
+const MANAGER_EMAIL = 'mohamed.abdallah@themora.com';
+const MANAGER_NAME  = 'Mohamed Abdallah';
+
+const HR = {
+  mora: { emails: ['basila.elias@themora.com', 'happiness.makene@themora.com'], label: 'The Mora Zanzibar HR' },
+  tui:  { emails: ['irene.komba1@tui-blue.com'],                                label: 'TUI BLUE Bahari HR' }
+};
+
 const FACTORS = [
-  {
-    id: 'job-knowledge',
-    name: 'Job Knowledge',
-    desc: 'Has the employee demonstrated the skill & ability to perform the job satisfactorily, shown interest in learning & improving, & become familiar with our rules & policies?'
-  },
-  {
-    id: 'work-quality',
-    name: 'Work Quality / Efficiency & Effectiveness',
-    desc: 'Accuracy; neatness; meet deadlines; attention to detail; adherence to duties & procedures in Job Description & Work Instruction.'
-  },
-  {
-    id: 'work-quantity',
-    name: 'Work Quantity',
-    desc: 'Does the employee accomplish assigned work in an organized, timely manner, produce necessary results in spite of unforeseen changes, alert appropriate team members if deadlines need to be re-negotiated?'
-  },
-  {
-    id: 'work-habits',
-    name: 'Work Habits',
-    desc: 'Attendance; punctuality; organization. Does the employee stay busy, look for things to do, & follow company policies & work procedures?'
-  },
-  {
-    id: 'adaptability',
-    name: 'Adaptability',
-    desc: 'Efficiency with which the employee works under stress & responds to change. Is the employee receptive to change/new ideas? Shows poise and/or courtesy in tough situations?'
-  },
-  {
-    id: 'dependability',
-    name: 'Dependability / Initiative',
-    desc: 'The extent to which an employee effectively & enthusiastically accomplishes assignments with minimal supervision. Independently contributes ideas & projects, follows-through on assignments, demonstrates eagerness & positivism, willingness to assist co-workers.'
-  },
-  {
-    id: 'customer-focus',
-    name: 'Customer Focus',
-    desc: 'The degree to which the employee takes the initiative to meet internal and external customer needs in a timely and courteous manner. Examines customer requests to properly identify & resolve customer concerns.'
-  },
-  {
-    id: 'health-safety',
-    name: 'Health, Safety, Hygiene & Fire Awareness',
-    desc: 'Consider degree to which the employee adheres to safety & health regulations. Maintains & observes safety & health standards, notifies others when violating safety & health regulations.'
-  },
-  {
-    id: 'communication',
-    name: 'Communication',
-    desc: 'Does the employee seek to clarify & confirm the accuracy of their understanding of unfamiliar or vague terms & instructions, make oral & written communication clear & easy to understand, assess & take steps to improve ability to communicate with precision & efficiency?'
-  },
-  {
-    id: 'behavior',
-    name: 'Behavior / Relations with Others',
-    desc: 'Does the employee show respect toward guests/superiors and workmates, cooperate & contribute to team efforts, respond positively to suggestions & instructions or criticism, keep supervisors informed of important details, & adapt well to changing circumstances?'
-  }
+  { id:'f1',  name:'Job Knowledge',
+    desc:'Has the employee demonstrated the skill & ability to perform the job satisfactorily, shown interest in learning & improving, & become familiar with our rules & policies?' },
+  { id:'f2',  name:'Work Quality / Efficiency & Effectiveness',
+    desc:'Accuracy; neatness; meet deadlines; attention to detail; adherence to duties & procedures in Job Description & Work Instruction.' },
+  { id:'f3',  name:'Work Quantity',
+    desc:'Does the employee accomplish assigned work in an organized, timely manner, produce necessary results in spite of unforeseen changes, alert team members if deadlines need to be re-negotiated?' },
+  { id:'f4',  name:'Work Habits',
+    desc:'Attendance; punctuality; organization. Does the employee stay busy, look for things to do, & follow company policies & work procedures?' },
+  { id:'f5',  name:'Adaptability',
+    desc:'Efficiency with which the employee works under stress & responds to change. Receptive to change/new ideas, shows poise and/or courtesy in tough situations?' },
+  { id:'f6',  name:'Dependability / Initiative',
+    desc:'Accomplishes assignments with minimal supervision. Independently contributes ideas & projects, follows-through on work, demonstrates eagerness & positivism, willingness to assist co-workers.' },
+  { id:'f7',  name:'Customer Focus',
+    desc:'Degree to which the employee takes initiative to meet internal and external customer needs in a timely and courteous manner. Examines customer requests to properly identify & resolve concerns.' },
+  { id:'f8',  name:'Health, Safety, Hygiene & Fire Awareness',
+    desc:'Degree to which the employee adheres to safety & health regulations. Maintains & observes safety & health standards, notifies others when violating safety & health regulations.' },
+  { id:'f9',  name:'Communication',
+    desc:'Seeks to clarify & confirm understanding of unfamiliar terms & instructions, makes oral & written communication clear & easy to understand, takes steps to improve communication precision & efficiency.' },
+  { id:'f10', name:'Behavior / Relations with Others',
+    desc:'Shows respect toward guests/superiors and workmates, cooperates & contributes to team efforts, responds positively to suggestions/instructions/criticism, keeps supervisors informed, adapts to changing circumstances.' }
 ];
 
 const RATINGS = [
-  { value: 'below60', label: 'Below 60', mid: 50 },
-  { value: '60-69',   label: '60 – 69',  mid: 65 },
-  { value: '70-79',   label: '70 – 79',  mid: 75 },
-  { value: '80-89',   label: '80 – 89',  mid: 85 },
-  { value: '90-100',  label: '90 – 100', mid: 95 }
+  { v:'below60', l:'Below 60', m:50 },
+  { v:'60-69',   l:'60 – 69',  m:65 },
+  { v:'70-79',   l:'70 – 79',  m:75 },
+  { v:'80-89',   l:'80 – 89',  m:85 },
+  { v:'90-100',  l:'90 – 100', m:95 }
 ];
 
-/* ── Build table rows ──────────────────────────────────────── */
-function buildRatingGroup(prefix, factorId) {
-  return `<div class="rating-group" role="group">${
+/* ══════════════════════════════════════════════════════════════
+   Build factor table rows
+══════════════════════════════════════════════════════════════ */
+function buildRatingGroup(prefix, fid) {
+  return `<div class="rating-group">${
     RATINGS.map(r => `
-      <label class="rating-btn" id="rb-${prefix}-${factorId}-${r.value}">
-        <input type="radio" name="${prefix}_${factorId}" value="${r.value}">
-        <span class="rating-btn-text">${r.label}</span>
+      <label class="r-btn" id="rb-${prefix}-${fid}-${r.v}">
+        <input type="radio" name="${prefix}_${fid}" value="${r.v}">
+        <span class="r-lbl">${r.l}</span>
       </label>`).join('')
   }</div>`;
 }
@@ -764,87 +860,294 @@ FACTORS.forEach((f, i) => {
   const tr = document.createElement('tr');
   tr.className = 'factor-row';
   tr.innerHTML = `
-    <td class="td-factor">
-      <div class="factor-header">
-        <span class="factor-num">${i + 1}</span>
+    <td class="td-factor emp-field">
+      <div class="factor-hdr">
+        <span class="factor-badge">${i+1}</span>
         <div>
           <div class="factor-name">${f.name}</div>
           <div class="factor-desc">${f.desc}</div>
         </div>
       </div>
-      <div class="comment-row">
-        <div class="comment-label">Comments:</div>
-        <input type="text" class="comment-input" placeholder="Add comments…">
+      <div class="comment-block">
+        <div class="comment-lbl">Staff Comments:</div>
+        <input type="text" id="sc-${f.id}" class="comment-input emp-comment" placeholder="Add comments…">
+      </div>
+      <div class="mgr-notes-block mgr-only">
+        <div class="mgr-notes-lbl">Manager's Notes:</div>
+        <input type="text" id="mc-${f.id}" class="mgr-notes-input" placeholder="Manager notes for this factor…">
       </div>
     </td>
-    <td class="td-rating">${buildRatingGroup('staff', f.id)}</td>
-    <td class="td-rating">${buildRatingGroup('mgr', f.id)}</td>`;
+    <td class="td-rating emp-rating">${buildRatingGroup('s', f.id)}</td>
+    <td class="td-rating mgr-col">${buildRatingGroup('m', f.id)}</td>`;
   tbody.appendChild(tr);
 });
 
-/* ── Rating interaction & score calculation ────────────────── */
-document.addEventListener('change', e => {
-  const input = e.target;
-  if (input.type !== 'radio') return;
-
-  if (input.name.startsWith('staff_') || input.name.startsWith('mgr_')) {
-    // Update button highlight for this group
-    document.querySelectorAll(`input[name="${input.name}"]`).forEach(r => {
-      const btn = document.getElementById(`rb-${input.name.replace('_', '-')}-${r.value}`);
-      if (btn) btn.className = 'rating-btn';
-    });
-    const selBtn = document.getElementById(`rb-${input.name.replace('_', '-')}-${input.value}`);
-    if (selBtn) selBtn.className = `rating-btn rb-sel-${input.value}`;
-    calculateScore();
-  }
-
-  if (input.name === 'recommendation') {
-    document.querySelectorAll('.rec-option').forEach(el => el.classList.remove('is-selected'));
-    input.closest('.rec-option').classList.add('is-selected');
-    const dateRow = document.getElementById('rec-date-row');
-    dateRow.style.display = input.value === 'extend' ? 'flex' : 'none';
-  }
-});
-
-function calculateScore() {
-  let sTotal = 0, sCount = 0, mTotal = 0, mCount = 0;
-  FACTORS.forEach(f => {
-    const sr = document.querySelector(`input[name="staff_${f.id}"]:checked`);
-    const mr = document.querySelector(`input[name="mgr_${f.id}"]:checked`);
-    if (sr) { const r = RATINGS.find(x => x.value === sr.value); sTotal += r.mid; sCount++; }
-    if (mr) { const r = RATINGS.find(x => x.value === mr.value); mTotal += r.mid; mCount++; }
-  });
-
-  const sAvg = sCount > 0 ? (sTotal / sCount).toFixed(1) + '%' : '—';
-  const mAvg = mCount > 0 ? (mTotal / mCount).toFixed(1) + '%' : '—';
-
-  document.getElementById('staff-avg').textContent = sAvg;
-  document.getElementById('mgr-avg').textContent = mAvg;
-
-  const scoreEl = document.getElementById('score-display');
-  if (mCount > 0) {
-    const s = parseFloat(mAvg);
-    scoreEl.textContent = s + '%';
-    if      (s >= 91) scoreEl.style.color = '#6c3483';
-    else if (s >= 81) scoreEl.style.color = '#1a5276';
-    else if (s >= 71) scoreEl.style.color = '#1e7e44';
-    else if (s >= 61) scoreEl.style.color = '#d35400';
-    else              scoreEl.style.color = '#c0392b';
-  } else {
-    scoreEl.textContent = '—';
-    scoreEl.style.color = 'var(--navy)';
+/* ══════════════════════════════════════════════════════════════
+   Hotel selector
+══════════════════════════════════════════════════════════════ */
+function selectHotel(val) {
+  document.getElementById('hotel-select').value = val;
+  document.querySelectorAll('.hotel-btn').forEach(b => b.classList.remove('sel'));
+  document.querySelector(`.hotel-btn[data-hotel="${val}"]`).classList.add('sel');
+  // Show HR email in Phase 2
+  const hr = HR[val];
+  if (hr) {
+    document.getElementById('hr-email-text').textContent = hr.emails.join(', ');
+    document.getElementById('hr-email-display').style.display = 'flex';
   }
 }
 
-function resetForm() {
-  if (confirm('Reset all form fields? This cannot be undone.')) {
-    document.getElementById('appraisal-form').reset();
-    // Clear all rating button highlights
-    document.querySelectorAll('.rating-btn').forEach(b => b.className = 'rating-btn');
-    document.querySelectorAll('.rec-option').forEach(el => el.classList.remove('is-selected'));
-    document.getElementById('rec-date-row').style.display = 'none';
-    calculateScore();
+/* ══════════════════════════════════════════════════════════════
+   Rating interaction
+══════════════════════════════════════════════════════════════ */
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.type === 'radio' && (el.name.startsWith('s_') || el.name.startsWith('m_'))) {
+    document.querySelectorAll(`input[name="${el.name}"]`).forEach(r => {
+      const btn = document.getElementById(`rb-${el.name.replace('_','-')}-${r.value}`);
+      if (btn) btn.className = 'r-btn';
+    });
+    const sel = document.getElementById(`rb-${el.name.replace('_','-')}-${el.value}`);
+    if (sel) sel.className = `r-btn rs-${el.value}`;
+    calcScore();
   }
+  if (el.name === 'recommendation') {
+    document.querySelectorAll('.rec-opt').forEach(o => o.classList.remove('sel'));
+    el.closest('.rec-opt').classList.add('sel');
+    document.getElementById('rec-date-row').style.display = el.value === 'extend' ? 'flex' : 'none';
+  }
+});
+
+function calcScore() {
+  let sT=0, sC=0, mT=0, mC=0;
+  FACTORS.forEach(f => {
+    const sr = document.querySelector(`input[name="s_${f.id}"]:checked`);
+    const mr = document.querySelector(`input[name="m_${f.id}"]:checked`);
+    if (sr) { sT += RATINGS.find(r => r.v===sr.value).m; sC++; }
+    if (mr) { mT += RATINGS.find(r => r.v===mr.value).m; mC++; }
+  });
+  const sA = sC ? (sT/sC).toFixed(1)+'%' : '—';
+  const mA = mC ? (mT/mC).toFixed(1)+'%' : '—';
+  ['staff-avg-val','staff-total'].forEach(id => document.getElementById(id).textContent = sA);
+  ['mgr-avg-val','mgr-total'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent = mA; });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Data encode / decode (handles Unicode)
+══════════════════════════════════════════════════════════════ */
+function encodeData(obj) {
+  return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+}
+function decodeData(str) {
+  return JSON.parse(decodeURIComponent(escape(atob(str))));
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Collect employee form data
+══════════════════════════════════════════════════════════════ */
+function collectEmployeeData() {
+  const d = {
+    hotel:      document.getElementById('hotel-select').value,
+    name:       document.getElementById('emp-name').value,
+    payroll:    document.getElementById('payroll-no').value,
+    jobTitle:   document.getElementById('job-title').value,
+    date:       document.getElementById('appraisal-date').value,
+    dept:       document.getElementById('department').value,
+    manager:    document.getElementById('manager-name').value,
+    reviewType: document.getElementById('review-type').value,
+    from:       document.getElementById('period-from').value,
+    to:         document.getElementById('period-to').value,
+    empSig:     document.getElementById('emp-sig').value,
+    empSigDate: document.getElementById('emp-sig-date').value,
+    purposes:   [],
+    sRatings:   {},
+    sComments:  {}
+  };
+  document.querySelectorAll('input[name="purpose"]:checked').forEach(cb => d.purposes.push(cb.value));
+  FACTORS.forEach(f => {
+    const r = document.querySelector(`input[name="s_${f.id}"]:checked`);
+    if (r) d.sRatings[f.id] = r.value;
+    d.sComments[f.id] = (document.getElementById(`sc-${f.id}`) || {}).value || '';
+  });
+  return d;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Phase 1 → Submit to Manager
+══════════════════════════════════════════════════════════════ */
+function submitToManager() {
+  const name = document.getElementById('emp-name').value.trim();
+  if (!name) { alert('Please enter your name before submitting.'); return; }
+  const hotel = document.getElementById('hotel-select').value;
+  if (!hotel) { alert('Please select your hotel before submitting.'); return; }
+
+  const data    = collectEmployeeData();
+  const encoded = encodeData(data);
+  const url     = window.location.href.split('?')[0] + '?phase=manager&data=' + encodeURIComponent(encoded);
+
+  const hotelLabel = hotel === 'mora' ? 'The Mora Zanzibar' : 'TUI BLUE Bahari';
+  const subject = encodeURIComponent(`Performance Appraisal Review — ${name} (${hotelLabel})`);
+  const body = encodeURIComponent(
+`Dear ${MANAGER_NAME},
+
+${name} has completed their performance self-appraisal and it is ready for your review.
+
+Employee : ${name}
+Hotel    : ${hotelLabel}
+Dept     : ${data.dept || '—'}
+
+Please click the link below to open the form in your browser and complete the manager section:
+
+${url}
+
+Once you have completed your review, use the Download PDF and Email to HR buttons in the form.
+
+Thank you.
+${name}`
+  );
+
+  window.open(`mailto:${MANAGER_EMAIL}?subject=${subject}&body=${body}`);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Phase 2 — Populate from URL data
+══════════════════════════════════════════════════════════════ */
+function populateAndLockEmployee(d) {
+  const set = (id, val) => { const el=document.getElementById(id); if(el && val) el.value=val; };
+  set('emp-name',      d.name);
+  set('payroll-no',    d.payroll);
+  set('job-title',     d.jobTitle);
+  set('appraisal-date',d.date);
+  set('department',    d.dept);
+  set('manager-name',  d.manager);
+  set('review-type',   d.reviewType);
+  set('period-from',   d.from);
+  set('period-to',     d.to);
+  set('emp-sig',       d.empSig);
+  set('emp-sig-date',  d.empSigDate);
+
+  if (d.hotel) selectHotel(d.hotel);
+
+  (d.purposes || []).forEach(v => {
+    const cb = document.querySelector(`input[name="purpose"][value="${v}"]`);
+    if (cb) cb.checked = true;
+  });
+
+  FACTORS.forEach(f => {
+    const rv = (d.sRatings || {})[f.id];
+    if (rv) {
+      const radio = document.querySelector(`input[name="s_${f.id}"][value="${rv}"]`);
+      if (radio) {
+        radio.checked = true;
+        const btn = document.getElementById(`rb-s-${f.id}-${rv}`);
+        if (btn) btn.className = `r-btn rs-${rv}`;
+      }
+    }
+    const cv = (d.sComments || {})[f.id];
+    const ci = document.getElementById(`sc-${f.id}`);
+    if (ci && cv) ci.value = cv;
+  });
+
+  calcScore();
+
+  // Update banner with employee name
+  const hotel = d.hotel === 'mora' ? 'The Mora Zanzibar' : 'TUI BLUE Bahari';
+  document.getElementById('mgr-banner-name').textContent =
+    ` — Reviewing: ${d.name || 'Employee'} (${hotel})`;
+  document.title = `Manager Review — ${d.name || 'Employee'} | Cluster Appraisal`;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Phase switching
+══════════════════════════════════════════════════════════════ */
+function setPhase(phase) {
+  document.body.className = `phase-${phase}`;
+  document.getElementById('step1').className = phase === 'employee' ? 'step active' : 'step done';
+  document.getElementById('step2').className = phase === 'manager'  ? 'step active' : (phase === 'hr' ? 'step done' : 'step');
+  document.getElementById('step3').className = phase === 'hr' ? 'step active' : 'step';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Init on page load
+══════════════════════════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('appraisal-date').value = new Date().toISOString().split('T')[0];
+
+  const params = new URLSearchParams(window.location.search);
+  const phase  = params.get('phase');
+  const raw    = params.get('data');
+
+  if (phase === 'manager' && raw) {
+    setPhase('manager');
+    try {
+      const d = decodeData(decodeURIComponent(raw));
+      populateAndLockEmployee(d);
+    } catch (err) {
+      console.error('Could not decode employee data:', err);
+    }
+  } else {
+    setPhase('employee');
+  }
+});
+
+/* ══════════════════════════════════════════════════════════════
+   Generate PDF
+══════════════════════════════════════════════════════════════ */
+async function generatePDF() {
+  const btns = document.querySelectorAll('#download-btn, #download-btn2');
+  btns.forEach(b => { b.disabled=true; b.textContent='⏳ Generating…'; });
+
+  const empName = document.getElementById('emp-name').value.trim() || 'Employee';
+  const dateStr  = document.getElementById('appraisal-date').value || new Date().toISOString().split('T')[0];
+  const filename = `Performance_Evaluation_${empName.replace(/\s+/g,'_')}_${dateStr}.pdf`;
+
+  const opt = {
+    margin:      [8,8,8,8],
+    filename,
+    image:       { type:'jpeg', quality:.97 },
+    html2canvas: { scale:2, useCORS:true, letterRendering:true },
+    jsPDF:       { unit:'mm', format:'a4', orientation:'portrait' }
+  };
+  try {
+    await html2pdf().set(opt).from(document.getElementById('appraisal-form')).save();
+  } catch {
+    alert('PDF generation failed. Use Ctrl/Cmd+P → Save as PDF as an alternative.');
+  }
+  btns.forEach(b => { b.disabled=false; b.innerHTML='&#11015; Download PDF'; });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Email to HR
+══════════════════════════════════════════════════════════════ */
+function emailToHR() {
+  const hotel = document.getElementById('hotel-select').value;
+  if (!hotel) { alert('Please make sure the hotel is selected.'); return; }
+
+  const hr       = HR[hotel];
+  const toEmails = hr.emails.join(',');
+  const hotelLbl = hotel === 'mora' ? 'The Mora Zanzibar' : 'TUI BLUE Bahari';
+  const empName  = document.getElementById('emp-name').value.trim() || '[Employee Name]';
+  const dept     = document.getElementById('department').value.trim() || '[Department]';
+
+  const subject = encodeURIComponent(`Performance Appraisal — ${empName} (${hotelLbl})`);
+  const body = encodeURIComponent(
+`Dear ${hr.label},
+
+Please find attached the completed Performance Appraisal for:
+
+  Employee   : ${empName}
+  Hotel      : ${hotelLbl}
+  Department : ${dept}
+
+The appraisal has been reviewed and signed off by management.
+
+Please attach the downloaded PDF to this email before sending.
+
+Kind regards,
+${MANAGER_NAME}`
+  );
+
+  window.open(`mailto:${toEmails}?subject=${subject}&body=${body}`);
 }
 </script>
 </body>
