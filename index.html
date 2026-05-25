@@ -6,6 +6,8 @@
   <title>Cluster Performance Evaluation — The Mora &amp; TUI BLUE Bahari</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"
           crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <style>
     /* ══ Design tokens ══════════════════════════════════════ */
     :root {
@@ -766,20 +768,33 @@
   </section>
 
   <!-- ═══ Phase 1: Submit to Manager ══════════════════════════ -->
-  <div class="submit-section emp-only">
+  <div class="submit-section emp-only" id="submit-section">
     <div class="submit-inner">
       <div class="submit-title">&#9993; Submit to Manager for Review</div>
-      <div class="submit-sub">Your self-assessment will be emailed to your manager as a link. The manager opens it in their browser to complete their ratings.</div>
+      <div class="submit-sub">Your self-assessment will be sent directly to your manager. No extra steps needed.</div>
       <div class="submit-email-row">
         <span class="submit-email-label">Sending to:</span>
-        <span class="submit-email-value">Mohamed Abdallah &lt;mohamed.abdallah@themora.com&gt;</span>
+        <span class="submit-email-value">Mohamed Abdallah &mdash; mohamed.abdallah@themora.com</span>
       </div>
-      <button type="button" class="btn btn-tui btn-lg" style="width:100%;justify-content:center" onclick="submitToManager()">
+      <button type="button" id="submit-btn" class="btn btn-tui btn-lg" style="width:100%;justify-content:center" onclick="submitToManager()">
         &#9993;&nbsp; Submit to Manager
       </button>
       <div style="font-size:11px;color:var(--muted);margin-top:10px">
         &#128274; Manager will see your data pre-filled. They cannot change your self-ratings.
       </div>
+    </div>
+  </div>
+
+  <!-- ═══ Success screen (shown after submit) ══════════════════ -->
+  <div class="submit-section emp-only" id="success-section" style="display:none">
+    <div class="submit-inner">
+      <div style="font-size:52px;margin-bottom:10px">&#10004;&#65039;</div>
+      <div class="submit-title" style="color:#2e7d32;font-size:18px">Submitted Successfully!</div>
+      <div class="submit-sub" style="margin-top:8px">
+        Your self-appraisal has been sent directly to your manager for review.<br>
+        You will be informed once the review is complete.
+      </div>
+      <div style="margin-top:16px;font-size:12px;color:var(--muted)">You may now close this page.</div>
     </div>
   </div>
 
@@ -809,6 +824,11 @@
 ══════════════════════════════════════════════════════════════ */
 const MANAGER_EMAIL = 'mohamed.abdallah@themora.com';
 const MANAGER_NAME  = 'Mohamed Abdallah';
+
+// ── EmailJS credentials (fill these in after setting up emailjs.com) ──
+const EMAILJS_PUBLIC_KEY  = 'YOUR_PUBLIC_KEY';   // Account → API Keys
+const EMAILJS_SERVICE_ID  = 'YOUR_SERVICE_ID';   // Email Services tab
+const EMAILJS_TEMPLATE_ID = 'YOUR_TEMPLATE_ID';  // Email Templates tab
 
 const HR = {
   mora: { emails: ['basila.elias@themora.com', 'happiness.makene@themora.com'], label: 'The Mora Zanzibar HR' },
@@ -977,40 +997,55 @@ function collectEmployeeData() {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   Phase 1 → Submit to Manager
+   Phase 1 → Submit to Manager (direct email via EmailJS)
 ══════════════════════════════════════════════════════════════ */
-function submitToManager() {
-  const name = document.getElementById('emp-name').value.trim();
-  if (!name) { alert('Please enter your name before submitting.'); return; }
+async function submitToManager() {
+  const name  = document.getElementById('emp-name').value.trim();
   const hotel = document.getElementById('hotel-select').value;
+
+  if (!name)  { alert('Please enter your name before submitting.'); return; }
   if (!hotel) { alert('Please select your hotel before submitting.'); return; }
 
-  const data    = collectEmployeeData();
-  const encoded = encodeData(data);
-  const url     = window.location.href.split('?')[0] + '?phase=manager&data=' + encodeURIComponent(encoded);
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '&#9203; Sending&hellip;';
 
+  const data       = collectEmployeeData();
+  const encoded    = encodeData(data);
+  const reviewUrl  = window.location.href.split('?')[0] + '?phase=manager&data=' + encodeURIComponent(encoded);
   const hotelLabel = hotel === 'mora' ? 'The Mora Zanzibar' : 'TUI BLUE Bahari';
-  const subject = encodeURIComponent(`Performance Appraisal Review — ${name} (${hotelLabel})`);
-  const body = encodeURIComponent(
-`Dear ${MANAGER_NAME},
 
-${name} has completed their performance self-appraisal and it is ready for your review.
+  // Build a short ratings summary for the email body
+  const ratingsSummary = FACTORS.map((f, i) => {
+    const r = document.querySelector(`input[name="s_${f.id}"]:checked`);
+    return `  ${i+1}. ${f.name}: ${r ? r.value.replace('below60','Below 60') : 'Not rated'}`;
+  }).join('\n');
 
-Employee : ${name}
-Hotel    : ${hotelLabel}
-Dept     : ${data.dept || '—'}
+  try {
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_name:         MANAGER_NAME,
+      employee_name:   name,
+      hotel:           hotelLabel,
+      department:      data.dept      || '—',
+      job_title:       data.jobTitle  || '—',
+      review_period:   data.reviewType ? data.reviewType.replace('-', ' ') : '—',
+      period_dates:    `${data.from || '—'} → ${data.to || '—'}`,
+      ratings_summary: ratingsSummary,
+      review_link:     reviewUrl,
+      reply_to:        MANAGER_EMAIL
+    });
 
-Please click the link below to open the form in your browser and complete the manager section:
+    // Hide form submit area, show success screen
+    document.getElementById('submit-section').style.display = 'none';
+    document.getElementById('success-section').style.display = 'block';
+    document.getElementById('success-section').scrollIntoView({ behavior: 'smooth' });
 
-${url}
-
-Once you have completed your review, use the Download PDF and Email to HR buttons in the form.
-
-Thank you.
-${name}`
-  );
-
-  window.open(`mailto:${MANAGER_EMAIL}?subject=${subject}&body=${body}`);
+  } catch (err) {
+    console.error('EmailJS error:', err);
+    alert('Failed to send. Please check your internet connection and try again.\n\nIf the problem continues, contact your manager directly at ' + MANAGER_EMAIL);
+    btn.disabled = false;
+    btn.innerHTML = '&#9993;&nbsp; Submit to Manager';
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1075,6 +1110,7 @@ function setPhase(phase) {
    Init on page load
 ══════════════════════════════════════════════════════════════ */
 window.addEventListener('DOMContentLoaded', () => {
+  emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
   document.getElementById('appraisal-date').value = new Date().toISOString().split('T')[0];
 
   const params = new URLSearchParams(window.location.search);
