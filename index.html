@@ -435,14 +435,42 @@
     /* ══ Print / PDF ════════════════════════════════════════ */
     @media print {
       .toolbar, .hotel-bar, .phase-banner,
-      .submit-section, .action-bar, .mgr-only.emp-only { display: none !important; }
+      .submit-section, .success-section, .action-bar { display: none !important; }
       body { background: white; }
       .page { padding: 0; max-width: 100%; }
       .form-card { box-shadow: none; border-radius: 0; }
       .section, .factor-row { page-break-inside: avoid; }
-      /* Show all columns when printing */
       .mgr-col, .mgr-col-head { display: table-cell !important; }
     }
+
+    /* ══ PDF capture mode (applied by JS, ignored by @media print) ═ */
+    body.pdf-mode .toolbar,
+    body.pdf-mode .hotel-bar,
+    body.pdf-mode .phase-banner,
+    body.pdf-mode .submit-section,
+    body.pdf-mode .success-section,
+    body.pdf-mode .action-bar,
+    body.pdf-mode .score-row         { display: none !important; }
+
+    body.pdf-mode                    { background: white !important; }
+    body.pdf-mode .page              { padding: 0 !important; max-width: 100% !important; }
+    body.pdf-mode .form-card         { box-shadow: none !important; border-radius: 4px !important; }
+
+    /* Always show both rating columns in PDF */
+    body.pdf-mode .mgr-col,
+    body.pdf-mode .mgr-col-head      { display: table-cell !important; }
+
+    /* Show manager sections even if phase-employee CSS hides them */
+    body.pdf-mode .mgr-only          { display: block !important; }
+    body.pdf-mode table .mgr-only    { display: table-cell !important; }
+
+    /* Clean up interactive elements for capture */
+    body.pdf-mode .field-input,
+    body.pdf-mode .field-select,
+    body.pdf-mode .comment-input,
+    body.pdf-mode .mgr-notes-input   { border-top: none !important; border-left: none !important;
+                                       border-right: none !important; background: transparent !important; }
+    body.pdf-mode .form-textarea     { border: 1px solid #ddd !important; background: #fafafa !important; }
 
     /* ══ Responsive ═════════════════════════════════════════ */
     @media (max-width: 640px) {
@@ -1135,25 +1163,48 @@ window.addEventListener('DOMContentLoaded', () => {
 ══════════════════════════════════════════════════════════════ */
 async function generatePDF() {
   const btns = document.querySelectorAll('#download-btn, #download-btn2');
-  btns.forEach(b => { b.disabled=true; b.textContent='⏳ Generating…'; });
+  btns.forEach(b => { b.disabled = true; b.textContent = '⏳ Generating…'; });
 
-  const empName = document.getElementById('emp-name').value.trim() || 'Employee';
-  const dateStr  = document.getElementById('appraisal-date').value || new Date().toISOString().split('T')[0];
-  const filename = `Performance_Evaluation_${empName.replace(/\s+/g,'_')}_${dateStr}.pdf`;
+  // Apply pdf-mode: hides chrome, shows all content, cleans up inputs
+  document.body.classList.add('pdf-mode');
+  // Give the browser one frame to apply the CSS changes before capture
+  await new Promise(r => setTimeout(r, 200));
+
+  const empName  = document.getElementById('emp-name').value.trim() || 'Employee';
+  const dateStr  = document.getElementById('appraisal-date').value  || new Date().toISOString().split('T')[0];
+  const hotel    = document.getElementById('hotel-select').value;
+  const hotelTag = hotel === 'mora' ? '_TheMora' : hotel === 'tui' ? '_TUIBLUE' : '';
+  const filename = `Performance_Evaluation_${empName.replace(/\s+/g, '_')}${hotelTag}_${dateStr}.pdf`;
 
   const opt = {
-    margin:      [8,8,8,8],
+    margin:      [10, 8, 10, 8],
     filename,
-    image:       { type:'jpeg', quality:.97 },
-    html2canvas: { scale:2, useCORS:true, letterRendering:true },
-    jsPDF:       { unit:'mm', format:'a4', orientation:'portrait' }
+    image:       { type: 'jpeg', quality: 0.98 },
+    html2canvas: {
+      scale:           2,
+      useCORS:         true,
+      letterRendering: true,
+      scrollX:         0,
+      scrollY:         -window.scrollY,
+      windowWidth:     document.documentElement.scrollWidth
+    },
+    jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak:   { mode: ['avoid-all', 'css', 'legacy'], before: '.section' }
   };
+
   try {
-    await html2pdf().set(opt).from(document.getElementById('appraisal-form')).save();
-  } catch {
-    alert('PDF generation failed. Use Ctrl/Cmd+P → Save as PDF as an alternative.');
+    await html2pdf()
+      .set(opt)
+      .from(document.getElementById('appraisal-form'))
+      .save();
+  } catch (err) {
+    console.error('PDF error:', err);
+    alert('PDF generation failed. As an alternative, use Ctrl/Cmd+P → Save as PDF.');
   }
-  btns.forEach(b => { b.disabled=false; b.innerHTML='&#11015; Download PDF'; });
+
+  // Restore normal view
+  document.body.classList.remove('pdf-mode');
+  btns.forEach(b => { b.disabled = false; b.innerHTML = '&#11015; Download PDF'; });
 }
 
 /* ══════════════════════════════════════════════════════════════
